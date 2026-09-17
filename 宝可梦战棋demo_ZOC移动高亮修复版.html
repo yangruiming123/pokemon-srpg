@@ -1,0 +1,2473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宝可梦战棋 Demo</title>
+<style>
+/* SECTION: style-base */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#12151f;--bg2:#1a1f2e;--panel:#212840;--panel2:#2a3350;
+  --line:#3a4568;--txt:#e8ecf7;--dim:#9aa6c4;--dim2:#6f7c9c;
+  --p1:#4aa3ff;--p1d:#1c4f8a;--p2:#ff6b6b;--p2d:#8a2c2c;
+  --hl-move:rgba(74,163,255,.42);--hl-atk:rgba(255,92,92,.42);
+  --hl-deploy:rgba(246,201,69,.38);--ok:#5bbf6a;--warn:#f6c945;
+}
+html,body{height:100%}
+body{
+  background:radial-gradient(1200px 700px at 50% -10%,#243055 0%,var(--bg) 60%);
+  color:var(--txt);font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+  font-size:14px;line-height:1.6;-webkit-text-size-adjust:100%;
+  -webkit-user-select:none;user-select:none;overflow-x:hidden;
+}
+button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer;border:none;background:none}
+.hidden{display:none!important}
+.screen{min-height:100vh;display:flex;flex-direction:column}
+
+/* SECTION: style-title */
+#screenTitle{align-items:center;justify-content:center;padding:32px 20px;text-align:center}
+.title-logo{font-size:clamp(30px,7vw,52px);font-weight:800;letter-spacing:.12em;
+  background:linear-gradient(120deg,#f6c945,#ff8a4c 40%,#4aa3ff 80%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;margin-bottom:6px}
+.title-sub{color:var(--dim);font-size:13px;letter-spacing:.24em;margin-bottom:30px}
+.title-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  padding:26px 24px;width:min(460px,100%);box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.btn-primary{display:block;width:100%;padding:15px 20px;border-radius:12px;font-size:17px;font-weight:700;
+  letter-spacing:.1em;background:linear-gradient(120deg,#4aa3ff,#6a7bff);color:#fff;
+  box-shadow:0 8px 22px rgba(74,163,255,.35);transition:transform .12s,box-shadow .12s}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(74,163,255,.45)}
+.btn-primary:active{transform:translateY(0)}
+.btn-ghost{padding:10px 18px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--dim);font-size:13px;transition:border-color .12s,color .12s}
+.btn-ghost:hover{border-color:var(--p1);color:var(--txt)}
+.btn-ghost[disabled]{opacity:.4;cursor:not-allowed}
+.field-group{margin:22px 0;text-align:left}
+.field-label{font-size:12px;color:var(--dim2);letter-spacing:.1em;margin-bottom:8px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{flex:1 1 auto;min-width:130px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--bg2);color:var(--dim);font-size:13px;text-align:center;transition:all .12s}
+.seg button.on{border-color:var(--warn);color:#fff;background:linear-gradient(120deg,rgba(246,201,69,.22),rgba(255,138,76,.18))}
+.title-foot{margin-top:20px;color:var(--dim2);font-size:12px;line-height:1.9}
+.kbd{display:inline-block;padding:1px 6px;border-radius:5px;border:1px solid var(--line);
+  background:var(--bg2);color:var(--dim);font-size:11px;margin:0 2px}
+
+/* SECTION: style-topbar */
+.topbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:10px 16px;background:rgba(18,21,31,.92);border-bottom:1px solid var(--line);
+  position:sticky;top:0;z-index:30;backdrop-filter:blur(8px)}
+.tb-title{font-weight:700;letter-spacing:.08em;font-size:15px}
+.tb-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.chip{padding:5px 11px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);
+  font-size:12px;color:var(--dim);white-space:nowrap}
+.chip b{color:var(--txt);font-weight:700}
+.chip.p1{border-color:var(--p1d);color:#bcd9ff}
+.chip.p2{border-color:var(--p2d);color:#ffc9c9}
+.chip.state{border-color:#6a5a2a;color:var(--warn)}
+
+/* SECTION: style-layout */
+.layout{flex:1;display:grid;grid-template-columns:230px minmax(0,1fr) 290px;gap:14px;
+  padding:14px 16px 22px;align-items:start;max-width:1500px;width:100%;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.panel-head{padding:10px 13px;background:var(--panel2);border-bottom:1px solid var(--line);
+  font-size:13px;font-weight:700;letter-spacing:.06em;display:flex;align-items:center;gap:8px}
+.panel-head .tag{margin-left:auto;font-size:11px;font-weight:500;color:var(--dim2)}
+.panel-body{padding:12px 13px}
+.head-p1{box-shadow:inset 3px 0 0 var(--p1)}
+.head-p2{box-shadow:inset 3px 0 0 var(--p2)}
+
+/* SECTION: style-picklist */
+.pick{display:flex;align-items:center;gap:10px;padding:10px;border-radius:11px;
+  border:1px solid var(--line);background:var(--bg2);margin-bottom:9px;cursor:pointer;transition:all .12s;text-align:left;width:100%}
+.pick:hover{border-color:var(--p1);background:#22304d}
+.pick.on{border-color:var(--warn);background:linear-gradient(120deg,rgba(246,201,69,.16),rgba(255,138,76,.1))}
+.pick-av{width:38px;height:38px;flex:0 0 38px;border-radius:10px;display:grid;place-items:center;
+  font-weight:800;font-size:17px;color:#0e1220}
+.pick-name{font-weight:700;font-size:13px}
+.pick-meta{font-size:11px;color:var(--dim2);margin-top:2px}
+.panel-foot{padding:11px 13px;border-top:1px solid var(--line);background:rgba(0,0,0,.16)}
+.btn-danger{width:100%;padding:11px;border-radius:10px;border:1px solid #6a3030;background:#2c1f26;
+  color:#e39a9a;font-weight:700;letter-spacing:.08em;transition:all .12s}
+.btn-danger:not([disabled]):hover{background:#43262c;color:#fff;border-color:var(--p2)}
+.btn-danger[disabled]{opacity:.35;cursor:not-allowed;border-color:var(--line);background:var(--bg2);color:var(--dim2)}
+.btn-confirm{width:100%;padding:12px;border-radius:10px;font-weight:800;letter-spacing:.1em;
+  background:var(--bg2);border:1px solid var(--line);color:var(--dim2);transition:all .15s}
+.btn-confirm.lit{background:linear-gradient(120deg,#5bbf6a,#3f9e8f);border-color:#5bbf6a;color:#08150f;
+  box-shadow:0 6px 18px rgba(91,191,106,.32)}
+.btn-confirm.lit:hover{filter:brightness(1.08)}
+
+/* SECTION: style-stage */
+.stage{display:flex;flex-direction:column;gap:12px;min-width:0}
+.board-wrap{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:12px;display:flex;justify-content:center}
+.board{position:relative;display:grid;grid-template-columns:repeat(10,1fr);grid-template-rows:repeat(10,1fr);gap:0;  width:min(100%,600px);aspect-ratio:1/1;touch-action:manipulation}
+.cell{position:relative;width:100%;height:100%;border-radius:4px;background:#243050;border:1px solid rgba(255,255,255,.05);  display:grid;place-items:center;overflow:hidden;cursor:pointer;transition:background .12s,box-shadow .12s}
+.cell.t01{background:linear-gradient(150deg,#2b3d5e,#243350)}
+.cell.t02{background:linear-gradient(150deg,#4a4a2e,#3a3c28)}
+.cell.t03{background:linear-gradient(150deg,#5b4636,#453527)}
+.cell .terr{position:absolute;left:3px;top:1px;font-size:10px;color:rgba(255,255,255,.42);line-height:1;pointer-events:none;z-index:2}
+.cell .htn{position:absolute;right:3px;bottom:1px;font-size:9px;color:rgba(255,255,255,.34);line-height:1;pointer-events:none;z-index:2}
+.cell.hl-deploy{background:var(--hl-deploy);box-shadow:inset 0 0 0 1px rgba(246,201,69,.75)}
+.cell.hl-move{background:var(--hl-move);box-shadow:inset 0 0 0 1px rgba(74,163,255,.85)}
+.cell.hl-pass{background:rgba(74,163,255,.17);box-shadow:inset 0 0 0 1px rgba(74,163,255,.4)}
+.cell.hl-atk{background:var(--hl-atk);box-shadow:inset 0 0 0 1px rgba(255,92,92,.85)}
+.cell.hl-origin{box-shadow:inset 0 0 0 2px rgba(246,201,69,.9)}
+.cell.hl-sel{box-shadow:inset 0 0 0 2px #fff}
+.cell.hl-deploy:hover,.cell.hl-move:hover,.cell.hl-atk:hover{filter:brightness(1.22)}
+.cell.dim{filter:saturate(.5) brightness(.72)}
+
+/* SECTION: style-token */
+.token{position:relative;width:80%;height:80%;border-radius:9px;display:flex;flex-direction:column;z-index:4;
+  align-items:center;justify-content:center;gap:1px;font-weight:800;
+  box-shadow:0 3px 9px rgba(0,0,0,.45);transition:transform .12s}
+.token .glyph{font-size:clamp(11px,2.4vw,19px);line-height:1;color:#0e1220}
+.token .hpv{font-size:8px;line-height:1;color:rgba(14,18,32,.75);font-weight:700}
+.token.p1{background:linear-gradient(150deg,#7cc0ff,#3f86e0)}
+.token.p2{background:linear-gradient(150deg,#ff9d9d,#e05a5a)}
+.token.spent{filter:grayscale(.72) brightness(.7)}
+.token.acted::after{content:'';position:absolute;inset:0;border-radius:9px;border:1px dashed rgba(255,255,255,.5)}
+.token.sprite{position:absolute;z-index:12;pointer-events:none;width:auto;height:auto;
+  transition:left .13s linear,top .13s linear}
+.buffs{position:absolute;left:2px;bottom:2px;display:flex;gap:1px;z-index:5;pointer-events:none}
+.buff-i{width:11px;height:11px;border-radius:3px;font-size:8px;line-height:11px;text-align:center;
+  font-weight:800;color:#0e1220;background:#c9d2e3}
+.buff-i.m{background:#8fd0ff}.buff-i.b{background:#a8e6a1}
+.cell .fx{position:absolute;inset:0;display:grid;place-items:center;font-size:clamp(9px,1.8vw,14px);
+  font-weight:800;color:#fff;background:rgba(255,138,76,.85);z-index:10;pointer-events:none;
+  animation:fxpop .6s ease-out forwards;border-radius:4px}
+@keyframes fxpop{0%{opacity:0;transform:scale(.6)}25%{opacity:1;transform:scale(1.12)}100%{opacity:0;transform:scale(1)}}
+
+/* SECTION: style-actionbar */
+.actionbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.ab-hint{font-size:12px;color:var(--dim);flex:1 1 200px;min-width:0}
+.ab-hint b{color:var(--warn)}
+.ab-btns{display:flex;gap:8px;flex-wrap:wrap}
+.ab-btn{padding:9px 15px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);
+  font-size:12.5px;font-weight:700;color:var(--dim);transition:all .12s;white-space:nowrap}
+.ab-btn:hover:not([disabled]){border-color:var(--p1);color:#fff;background:#26334f}
+.ab-btn.warn:hover:not([disabled]){border-color:var(--p2);background:#3a2730}
+.ab-btn[disabled]{opacity:.32;cursor:not-allowed}
+
+/* SECTION: style-info */
+.info-empty{color:var(--dim2);font-size:12.5px;text-align:center;padding:22px 8px;line-height:2}
+.info-title{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.info-av{width:44px;height:44px;flex:0 0 44px;border-radius:11px;display:grid;place-items:center;
+  font-size:20px;font-weight:800;color:#0e1220}
+.info-name{font-size:16px;font-weight:800;letter-spacing:.04em}
+.info-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px}
+.tg{font-size:10.5px;padding:1.5px 7px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+.hpbar{height:9px;border-radius:5px;background:#141a29;overflow:hidden;border:1px solid var(--line);margin:5px 0 3px}
+.hpbar i{display:block;height:100%;background:linear-gradient(90deg,#5bbf6a,#8fd96a);transition:width .28s}
+.hpbar.mid i{background:linear-gradient(90deg,#f6c945,#ff9d5c)}
+.hpbar.low i{background:linear-gradient(90deg,#ff6b6b,#ff9d5c)}
+.hptxt{font-size:11px;color:var(--dim2);display:flex;justify-content:space-between}
+.kv{display:grid;grid-template-columns:74px minmax(0,1fr);gap:5px 8px;font-size:12.5px;margin-top:11px}
+.kv dt{color:var(--dim2)}
+.kv dd{color:var(--txt);word-break:break-word}
+.sub-h{font-size:11px;color:var(--dim2);letter-spacing:.14em;margin:14px 0 6px;
+  padding-bottom:5px;border-bottom:1px dashed var(--line)}
+.eff-list{display:flex;flex-direction:column;gap:5px}
+.eff{font-size:12px;padding:6px 9px;border-radius:8px;background:var(--bg2);border-left:2px solid var(--p1);color:var(--dim)}
+.eff b{color:var(--txt)}
+
+/* SECTION: style-log */
+.log{max-height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;padding-right:3px}
+.log::-webkit-scrollbar{width:6px}
+.log::-webkit-scrollbar-thumb{background:var(--line);border-radius:3px}
+.log-i{font-size:11.8px;line-height:1.55;padding:5px 8px;border-radius:7px;background:var(--bg2);color:var(--dim)}
+.log-i b{color:var(--txt);font-weight:700}
+.log-i.sys{border-left:2px solid var(--dim2)}
+.log-i.p1{border-left:2px solid var(--p1)}
+.log-i.p2{border-left:2px solid var(--p2)}
+.log-i.dmg{border-left:2px solid var(--p2);color:#ffd7d7}
+.log-i.ok{border-left:2px solid var(--ok);color:#c9f0cd}
+.log-empty{font-size:12px;color:var(--dim2);text-align:center;padding:16px 6px}
+
+/* SECTION: style-roster */
+.roster{display:flex;flex-direction:column;gap:7px}
+.rs{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:9px;background:var(--bg2);
+  border:1px solid transparent;cursor:default;font-size:12px}
+.rs.clickable{cursor:pointer}
+.rs.clickable:hover{border-color:var(--p1)}
+.rs.on{border-color:#fff}
+.rs.dead{opacity:.4;text-decoration:line-through}
+.rs-av{width:26px;height:26px;flex:0 0 26px;border-radius:7px;display:grid;place-items:center;
+  font-size:13px;font-weight:800;color:#0e1220}
+.rs-nm{font-weight:700}
+.rs-hp{margin-left:auto;color:var(--dim2);font-size:11px;white-space:nowrap}
+
+/* SECTION: style-modal */
+.modal-layer{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:20px;
+  background:rgba(6,8,14,.74);backdrop-filter:blur(3px);animation:fade .16s ease-out}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{width:min(560px,100%);max-height:86vh;overflow-y:auto;background:var(--panel);
+  border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 70px rgba(0,0,0,.6);animation:pop .18s ease-out}
+@keyframes pop{from{transform:translateY(12px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+.modal.wide{width:min(760px,100%)}
+.modal-h{padding:15px 18px;border-bottom:1px solid var(--line);font-size:15px;font-weight:800;letter-spacing:.06em;
+  display:flex;align-items:center;gap:10px}
+.modal-b{padding:16px 18px}
+.modal-f{padding:13px 18px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.modal-f .btn-primary{width:auto;display:inline-block;padding:11px 22px;font-size:14px}
+.phase-modal{text-align:center;padding:34px 20px}
+.phase-modal .big{font-size:clamp(24px,6vw,36px);font-weight:800;letter-spacing:.14em;margin-bottom:10px}
+.phase-modal .small{color:var(--dim);font-size:13px}
+.vs{display:grid;grid-template-columns:1fr 44px 1fr;gap:10px;align-items:start}
+.vs-mid{display:grid;place-items:center;font-size:19px;font-weight:800;color:var(--warn);padding-top:34px}
+.vs-card{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px}
+.vs-card.a{border-color:var(--p1d)}
+.vs-card.d{border-color:var(--p2d)}
+.vs-role{font-size:11px;letter-spacing:.14em;color:var(--dim2);margin-bottom:7px}
+.vs-nm{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px}
+.vs-av{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:15px;font-weight:800;color:#0e1220}
+.prewarn{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(255,107,107,.12);
+  border:1px solid rgba(255,107,107,.35);font-size:12.5px;line-height:1.9;color:#ffd7d7}
+.prewarn b{color:#fff}
+.rules{font-size:12.8px;line-height:1.95;color:var(--dim)}
+.rules h4{color:var(--txt);font-size:13px;margin:14px 0 5px;letter-spacing:.05em}
+.rules h4:first-child{margin-top:0}
+.rules code{background:var(--bg2);padding:1px 5px;border-radius:4px;color:var(--warn);font-size:12px}
+.rules ul{padding-left:18px}
+.rules li{margin-bottom:3px}
+.rtable{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 4px}
+.rtable th,.rtable td{border:1px solid var(--line);padding:5px 6px;text-align:center;white-space:nowrap}
+.rtable th{background:var(--panel2);color:var(--dim);font-weight:700}
+.rtable td{background:var(--bg2);color:var(--txt)}
+.rtable td.up{color:#8fd96a;font-weight:700}
+.rtable td.down{color:#ff9d9d}
+.rtable caption{caption-side:top;text-align:left;font-size:11px;color:var(--dim2);padding-bottom:4px}
+
+/* SECTION: style-gameover */
+.go-wrap{text-align:center;padding:40px 20px}
+.go-txt{font-size:clamp(22px,5.4vw,34px);font-weight:800;letter-spacing:.1em;margin-bottom:12px}
+.go-sub{color:var(--dim);font-size:13px;margin-bottom:24px}
+
+/* SECTION: style-toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:80;
+  padding:11px 20px;border-radius:11px;background:rgba(20,25,40,.96);border:1px solid var(--line);
+  box-shadow:0 10px 30px rgba(0,0,0,.5);font-size:13px;color:var(--txt);max-width:min(90vw,460px);
+  text-align:center;animation:tin .18s ease-out}
+.toast.warn{border-color:#8a6a2a;color:var(--warn)}
+.toast.bad{border-color:#8a3030;color:#ffb3b3}
+@keyframes tin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* SECTION: style-legend */
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--dim2);justify-content:center;margin-top:9px}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.18)}
+
+/* SECTION: style-sprite */
+/* 地块贴图：铺满整格，文字标签压在其上 */
+.cell .tile-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  border-radius:4px;pointer-events:none;z-index:1}
+/* 高亮层：用伪元素盖在地块贴图(z-index:1)之上，角色贴图(z-index:5)之下 */
+.cell.hl-deploy::before,.cell.hl-move::before,.cell.hl-pass::before,.cell.hl-atk::before{
+  content:'';position:absolute;inset:0;z-index:2;pointer-events:none;border-radius:4px
+}
+.cell.hl-deploy::before{background:var(--hl-deploy)}
+.cell.hl-move::before{z-index:3;background:var(--hl-move)}
+.cell.hl-pass::before{z-index:3;background:rgba(74,163,255,.17)}
+.cell.hl-atk::before{background:var(--hl-atk)}
+.cell .terr,.cell .htn{z-index:3}
+/* 角色动作帧：占满整格并底部对齐（格子 overflow:hidden，超高会被裁头，故取满格） */
+.spr{position:absolute;left:50%;bottom:0;width:100%;height:100%;
+  transform:translateX(-50%);transform-origin:bottom center;
+  object-fit:contain;object-position:bottom center;pointer-events:none;z-index:5;
+  filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.spr.flip{transform:translateX(-50%) scaleX(-1)}
+/* 像素风素材开启锐化（由 sprites.js 的 PIXEL_ART 开关控制） */
+.spr.pixelated,.tile-img.pixelated{image-rendering:pixelated}
+.token.has-spr .glyph,.token.has-spr .hpv{opacity:0}
+.token.has-spr{background:transparent;box-shadow:none}
+.token.has-spr .buffs{z-index:7}
+.token.has-spr .hpv{opacity:1;position:absolute;bottom:-2px;left:50%;transform:translateX(-50%);
+  background:rgba(10,13,22,.82);color:#fff;padding:0 4px;border-radius:4px;font-size:8px;
+  line-height:1.5;white-space:nowrap;z-index:9}
+.spr-tile-preview{width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+
+
+/* SECTION: style-zoc */
+.cell.hl-zoc{background:rgba(255,92,92,.12);box-shadow:inset 0 0 0 1px rgba(255,92,92,.45);z-index:1}
+.cell.hl-zoc-cost{background:rgba(255,92,92,.22);box-shadow:inset 0 0 0 1px rgba(255,92,92,.65);z-index:1}
+.cell.hl-zoc .zoc-mark{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:10px;color:rgba(255,92,92,.55);z-index:3;pointer-events:none;line-height:1}
+
+/* SECTION: style-responsive */
+@media (max-width:1080px){
+  .layout{grid-template-columns:minmax(0,1fr);padding:12px}
+  .panel-left,.panel-right{order:2}
+  .stage{order:1}
+  .board{width:min(100%,540px)}
+  .log{max-height:180px}
+}
+@media (max-width:560px){
+  .topbar{padding:9px 11px;gap:9px}
+  .tb-title{font-size:13.5px}
+  .chip{font-size:11px;padding:4px 9px}
+  .board-wrap{padding:8px;border-radius:11px}
+  .cell .terr{font-size:8px}.cell .htn{font-size:7px}
+  .vs{grid-template-columns:1fr;gap:8px}
+  .vs-mid{padding:0;font-size:15px}
+  .kv{grid-template-columns:66px minmax(0,1fr);font-size:12px}
+  .ab-hint{flex:1 1 100%}
+}
+</style>
+</head>
+<body>
+
+<!-- SECTION: screen-title -->
+<section id="screenTitle" class="screen">
+  <div class="title-logo">宝可梦战棋</div>
+  <div class="title-sub">SRPG · 规 则 验 证 原 型</div>
+  <div class="title-card">
+    <button class="btn-primary" id="btnStart" data-primary-action>开始游戏</button>
+    <div class="field-group">
+      <div class="field-label">地图预设</div>
+      <div class="seg" id="segMap"></div>
+    </div>
+    <button class="btn-ghost" id="btnRulesTitle" style="width:100%">规则与数据速查</button>
+    <div class="field-group" style="margin-bottom:16px">
+      <div class="field-label">贴图自检 <span id="sprRoot" style="color:var(--dim)"></span></div>
+      <div id="sprStatus" class="rules" style="font-size:11.5px;line-height:1.85"></div>
+      <button class="btn-ghost" id="btnRescan" style="width:100%;margin-top:8px">重新扫描贴图</button>
+    </div>
+    <div class="title-foot">
+      双人同屏轮流操作 · 未放贴图时以文字与色块呈现，放几张显示几张<br>
+      桌面端使用<span class="kbd">右键</span>取消与结束回合，移动端使用底部按钮
+    </div>
+  </div>
+</section>
+
+<!-- SECTION: screen-game -->
+<section id="screenGame" class="screen hidden">
+  <header class="topbar">
+    <div class="tb-title" id="tbTitle">宝可梦战棋</div>
+    <div class="tb-chips" id="tbChips"></div>
+  </header>
+
+  <div class="layout">
+    <!-- 左侧窗口 -->
+    <aside class="panel panel-left">
+      <div class="panel-head" id="leftHead">宝可梦选择</div>
+      <div class="panel-body" id="leftBody"></div>
+      <div class="panel-foot" id="leftFoot"></div>
+    </aside>
+
+    <!-- 中间地图 -->
+    <main class="stage">
+      <div class="board-wrap">
+        <div id="board" class="board"></div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="actionbar">
+        <div class="ab-hint" id="abHint"></div>
+        <div class="ab-btns" id="abBtns"></div>
+      </div>
+    </main>
+
+    <!-- 右侧信息栏 -->
+    <aside class="panel panel-right">
+      <div class="panel-head" id="rightHead">信息栏</div>
+      <div class="panel-body" id="rightBody"></div>
+      <div class="panel-foot" id="rightFoot"></div>
+      <div class="panel-head" style="border-top:1px solid var(--line)">战斗日志<span class="tag" id="logTag"></span></div>
+      <div class="panel-body"><div class="log" id="logBox"></div></div>
+    </aside>
+  </div>
+</section>
+
+<!-- SECTION: modal -->
+<div id="modalLayer" class="modal-layer hidden"></div>
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* ============================================================
+   宝可梦战棋 Demo — 静态数据层
+   对应设计文档：文件1 地图相关数据 / 文件2 宝可梦相关数据
+   ============================================================ */
+
+/* SECTION: data-const */
+var MAP_SIZE = 10; // 地图资源：10*10 的格子，x:0~9，y:0~9
+var DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]]; // 四向延展
+
+/* SECTION: data-field-effect */
+// 场地效果：00 无效果；01 攻击距离+1
+var FIELD_EFFECTS = {
+  '00': { code: '00', name: '无效果', atkRangeBonus: 0 },
+  '01': { code: '01', name: '攻击距离+1', atkRangeBonus: 1 }
+};
+
+/* SECTION: data-terrain */
+// 地图数据：Id，移动消耗，效果（动态数组）
+var TERRAINS = {
+  '01': { id: '01', name: '平原', glyph: '平', height: 0, effect: '00' },
+  '02': { id: '02', name: '丘陵', glyph: '丘', height: 1, effect: '01' },
+  '03': { id: '03', name: '山峰', glyph: '峰', height: 2, effect: '00' }
+};
+
+function buildPlainGrid() {
+  var g = [];
+  for (var y = 0; y < MAP_SIZE; y++) {
+    var row = [];
+    for (var x = 0; x < MAP_SIZE; x++) row.push('01'); // 全部为 01 平原
+    g.push(row);
+  }
+  return g;
+}
+
+function buildTerrainGrid() {
+  var g = buildPlainGrid();
+  var hills = [[3, 3], [4, 3], [3, 4], [6, 5], [5, 6], [6, 6], [4, 7], [2, 6]];
+  var peaks = [[4, 4], [5, 5], [7, 3]];
+  hills.forEach(function (p) { g[p[1]][p[0]] = '02'; });
+  peaks.forEach(function (p) { g[p[1]][p[0]] = '03'; });
+  return g;
+}
+
+var MAP_PRESETS = {
+  plain: { name: '文档默认 · 全平原', build: buildPlainGrid },
+  terrain: { name: '地形演示 · 丘陵与山峰', build: buildTerrainGrid }
+};
+
+/* SECTION: data-type */
+// 属性：00 一般 / 01 草 / 02 水 / 03 火 / 04 电
+var TYPE_NAMES = ['一般', '草', '水', '火', '电'];
+var TYPE_COLORS = ['#c9d2e3', '#5bbf6a', '#4aa3ff', '#ff8a4c', '#f6c945'];
+
+// 属性克制表：外层索引 = 受击方，内层索引 = 攻击方
+var TYPE_CHART = [
+  /* 00 一般 受击 */ [1, 1, 1, 1, 1],
+  /* 01 草   受击 */ [1, 0.5, 2, 0.5, 1],
+  /* 02 水   受击 */ [1, 0.5, 0.5, 2, 1],
+  /* 03 火   受击 */ [1, 2, 0.5, 0.5, 1],
+  /* 04 电   受击 */ [1, 0.5, 2, 1, 0.5]
+];
+
+/* SECTION: data-buff */
+// 技能效果 00 移动 buff
+var MOVE_BUFFS = {
+  '01': { code: '01', name: '束缚', desc: '移动力 -1', moveDelta: -1, badge: '束' },
+  '02': { code: '02', name: '禁止移动', desc: '本回合无法移动', noMove: true, badge: '禁' },
+  '03': { code: '03', name: '击落', desc: '飞行移动方式变为陆行', forceForm: 'land', badge: '落' }
+};
+
+// 技能效果 01 战斗 buff
+var BATTLE_BUFFS = {
+  '00': { code: '00', name: '庇护', desc: '减免 10 点伤害', dmgReduce: 10, badge: '庇' }
+};
+
+var BUFF_TAG_NAMES = { '00': '移动', '01': '战斗' };
+
+/* SECTION: data-pokemon */
+// 宝可梦信息（文件2）
+var POKEMONS = [
+  {
+    id: '01',
+    name: '皮卡丘',
+    glyph: '皮',
+    type: 4,           // 属性 04 电
+    hp: 50,            // 血量 50
+    move: 6,           // 移动力 7
+    form: 'land',      // 移动：陆
+    skill: {
+      name: '十万伏特',
+      dmg: 30,
+      range: 3,
+      type: 4,         // 技能属性 04 电
+      vfx: '特效：电光放射',
+      // 效果（数组存储）：击落 1 回合
+      effects: [{ tag: '00', code: '03', dur: 1, unit: 'turn' }]
+    }
+  },
+  {
+    id: '02',
+    name: '妙蛙种子',
+    glyph: '妙',
+    type: 1,           // 属性 01 草
+    hp: 70,            // 血量 70
+    move: 5,           // 移动力 6
+    form: 'land',      // 移动：陆
+    skill: {
+      name: '藤鞭',
+      dmg: 20,
+      range: 1,
+      type: 1,         // 技能属性 01 草
+      vfx: '特效：藤条抽击',
+      // 效果：束缚 1 回合
+      effects: [{ tag: '00', code: '01', dur: 1, unit: 'turn' }]
+    }
+  }
+];
+
+function getPokemon(id) {
+  for (var i = 0; i < POKEMONS.length; i++) if (POKEMONS[i].id === id) return POKEMONS[i];
+  return null;
+}
+
+/* SECTION: data-deploy */
+// 布置系统：记录上限数量 2
+var DEPLOY_LIMIT = 2;
+// 布置界面1 可放置格子 00,01,10,11
+var DEPLOY_CELLS_P1 = [[0, 0], [1, 0], [0, 1], [1, 1]];
+// 布置界面2：文档同样写作 00,01,10,11，会与玩家一重叠，此处取对角区域
+var DEPLOY_CELLS_P2 = [[8, 8], [9, 8], [8, 9], [9, 9]];
+
+/* SECTION: data-form */
+var FORM_NAMES = { land: '陆', sea: '海', air: '空' };
+
+</script>
+<script>
+/* ============================================================
+   宝可梦战棋 Demo — 规则与状态机层（文件3 / 文件5）
+   渲染与事件绑定见 ui 层脚本
+   ============================================================ */
+
+/* SECTION: engine-state */
+var ANIM = null;    // 移动动画中的临时位置覆盖（由 UI 层写入）
+var S = newState(); // 全局对局状态（newState 为函数声明，已提升）
+
+function newState() {
+  return {
+    screen: 'title',            // title / deploy / battle / gameover
+    mapPreset: 'plain',
+    grid: null,
+    // 布置系统
+    deploy: {
+      player: 1,
+      placed: [],               // [{id,x,y}] 放置阶段列表
+      picked: null,             // 记录的宝可梦 id
+      pickFrom: null,           // 'list' | 'board'
+      pickCell: null,           // {x,y} 当记录的是场上已放置宝可梦
+      n: 0
+    },
+    deployPlans: { 1: [], 2: [] },
+    // 战斗数据
+    units: [],                  // 宝可梦战斗信息（结构体数组）
+    buffs: [],                  // Buff 存储（链表以数组模拟）
+    nextNo: 1,
+    current: 1,
+    A1: 2, A2: 2,
+    // 状态机
+    phase: 'idle',              // idle/moveCalc/anim/movedChoice/atkCalc/atkReady/gameover
+    sel: null,                  // 当前操作的场内编号
+    tempPos: null,
+    moveRange: null,
+    atkRange: null,
+    target: null,               // 攻击预备状态的防守方编号
+    busy: false,
+    logs: [],
+    logSeq: 0
+  };
+}
+
+/* SECTION: engine-util */
+function key(x, y) { return x + ',' + y; }
+function inMap(x, y) { return x >= 0 && y >= 0 && x < MAP_SIZE && y < MAP_SIZE; }
+function terrainAt(x, y) { return TERRAINS[S.grid[y][x]]; }
+function fieldEffectAt(x, y) { return FIELD_EFFECTS[terrainAt(x, y).effect]; }
+function playerLabel(p) { return p === 1 ? '玩家一' : '玩家二'; }
+
+function logAdd(text, cls) {
+  S.logs.push({ id: ++S.logSeq, text: text, cls: cls || 'sys' });
+  if (S.logs.length > 140) S.logs.shift();
+}
+
+function unitByNo(no) {
+  for (var i = 0; i < S.units.length; i++) if (S.units[i].no === no) return S.units[i];
+  return null;
+}
+
+// 占据判定：ignoreNo 用于把自身视作不在原格
+// 显示位置：临时移动位置优先（贴图贴在该点），动画中取动画坐标
+function dispPos(u) {
+  if (ANIM && ANIM.no === u.no) return { x: ANIM.x, y: ANIM.y };
+  if (S.tempPos && S.sel === u.no) return S.tempPos;
+  return { x: u.x, y: u.y };
+}
+
+function unitAt(x, y, ignoreNo) {
+  for (var i = 0; i < S.units.length; i++) {
+    var u = S.units[i];
+    if (u.no === ignoreNo) continue;
+    if (!u.alive) continue;
+    var p = dispPos(u);
+    if (p.x === x && p.y === y) return u;
+  }
+  return null;
+}
+
+/* SECTION: engine-buff */
+// 取某宝可梦的 buff 列表
+function buffsOf(no) {
+  var out = [];
+  for (var i = 0; i < S.buffs.length; i++) if (S.buffs[i].no === no) out.push(S.buffs[i]);
+  return out;
+}
+
+function buffDef(b) {
+  return b.tag === '00' ? MOVE_BUFFS[b.code] : BATTLE_BUFFS[b.code];
+}
+
+function addBuff(no, tag, code, dur, unitKind) {
+  var def = tag === '00' ? MOVE_BUFFS[code] : BATTLE_BUFFS[code];
+  if (!def) return null;
+  // 同标签同效果不重复叠加，刷新持续时间
+  var list = S.buffs;
+  for (var i = 0; i < list.length; i++) {
+    if (list[i].no === no && list[i].tag === tag && list[i].code === code) {
+      list[i].remain = Math.max(list[i].remain, dur);
+      return list[i];
+    }
+  }
+  var b = { no: no, tag: tag, code: code, name: def.name, desc: def.desc, badge: def.badge, remain: dur, unit: unitKind || 'turn' };
+  list.push(b);
+  return b;
+}
+
+function hasMoveFlag(no, code) {
+  var l = buffsOf(no);
+  for (var i = 0; i < l.length; i++) if (l[i].tag === '00' && l[i].code === code) return true;
+  return false;
+}
+
+function dmgReduceOf(no) {
+  var r = 0, l = buffsOf(no);
+  for (var i = 0; i < l.length; i++) {
+    if (l[i].tag === '01') { var d = buffDef(l[i]); if (d && d.dmgReduce) r += d.dmgReduce; }
+  }
+  return r;
+}
+
+// 实际移动形态（击落后飞行变为陆行）
+function effectiveForm(u) {
+  var l = buffsOf(u.no);
+  for (var i = 0; i < l.length; i++) {
+    var d = buffDef(l[i]);
+    if (d && d.forceForm) return d.forceForm;
+  }
+  return u.base.form;
+}
+
+// 临时移动力 = 移动力 + buff 效果
+function tempMove(u) {
+  var v = u.base.move, l = buffsOf(u.no);
+  for (var i = 0; i < l.length; i++) {
+    if (l[i].tag !== '00') continue;
+    var d = buffDef(l[i]);
+    if (d && d.moveDelta) v += d.moveDelta;
+  }
+  if (hasMoveFlag(u.no, '02')) v = 0; // 禁止移动
+  return Math.max(0, v);
+}
+
+// 回合型 buff 每回合 -1；在所属玩家回合结束时结算
+function tickBuffs(side) {
+  var mine = [];
+  for (var i = 0; i < S.units.length; i++) if (S.units[i].side === side) mine.push(S.units[i].no);
+  var keep = [];
+  for (var j = 0; j < S.buffs.length; j++) {
+    var b = S.buffs[j];
+    if (mine.indexOf(b.no) < 0) { keep.push(b); continue; }
+    if (b.unit === 'turn') {
+      b.remain -= 1;
+      if (b.remain <= 0) {
+        var u = unitByNo(b.no);
+        logAdd('<b>' + (u ? u.base.name : '单位') + '</b> 的 ' + b.name + ' 效果结束', 'sys');
+        continue;
+      }
+    }
+    keep.push(b);
+  }
+  S.buffs = keep;
+}
+
+// 次数型 buff 使用后 -1
+function consumeUseBuffs(no) {
+  var keep = [];
+  for (var i = 0; i < S.buffs.length; i++) {
+    var b = S.buffs[i];
+    if (b.no === no && b.unit === 'use') {
+      b.remain -= 1;
+      if (b.remain <= 0) continue;
+    }
+    keep.push(b);
+  }
+  S.buffs = keep;
+}
+
+/* SECTION: engine-move-bfs */
+// 陆行移动消耗：高度>=2 不可扩展；其他为 1 + 高度差
+function moveCostLand(fx, fy, tx, ty) {
+  var th = terrainAt(tx, ty).height;
+  if (th >= 2) return Infinity;
+  var c = 1 + (th - terrainAt(fx, fy).height);
+  return c < 0 ? 0 : c;
+}
+
+function moveCost(form, fx, fy, tx, ty) {
+  if (form === 'land') return moveCostLand(fx, fy, tx, ty);
+  // 海 / 空：文档标注为待定，此处按平原同等规则处理
+  return 1;
+}
+
+// ZOC模块：读取所有敌对阵营单位，标记其四向相邻格子为ZOC
+function getZocCells(forSide) {
+  var zoc = {};
+  for (var i = 0; i < S.units.length; i++) {
+    var u = S.units[i];
+    if (u.side === forSide) continue;  // 只标记敌对阵营的ZOC
+    if (!u.alive) continue;
+    var ux = u.x, uy = u.y;
+    for (var d = 0; d < DIRS.length; d++) {
+      var nx = ux + DIRS[d][0], ny = uy + DIRS[d][1];
+      if (inMap(nx, ny)) zoc[key(nx, ny)] = true;
+    }
+  }
+  return zoc;
+}
+
+// 移动计算：BFS（按剩余移动力优先扩展），返回可达格、剩余力与父指针
+function computeMove(u, fromPos) {
+  var sx = fromPos ? fromPos.x : u.x, sy = fromPos ? fromPos.y : u.y;
+  var tmp = tempMove(u);
+  var form = effectiveForm(u);
+  // 获取敌方ZOC格子
+  var zoc = getZocCells(u.side);
+  var best = {}, parent = {}, cells = [], zocCosts = {};
+  var k0 = key(sx, sy);
+  best[k0] = tmp; parent[k0] = null;
+  var frontier = [{ x: sx, y: sy, r: tmp }];
+  while (frontier.length) {
+    frontier.sort(function (a, b) { return b.r - a.r; });
+    var cur = frontier.shift();
+    var ck = key(cur.x, cur.y);
+    if (best[ck] === undefined || cur.r < best[ck]) continue;
+    for (var i = 0; i < DIRS.length; i++) {
+      var nx = cur.x + DIRS[i][0], ny = cur.y + DIRS[i][1];
+      if (!inMap(nx, ny)) continue;
+      var occ = unitAt(nx, ny, u.no);
+      var friendlyPass = occ && occ.side === u.side;
+      if (occ && !friendlyPass) continue;           // 敌方占据格不可通行
+      var c = moveCost(form, cur.x, cur.y, nx, ny);
+      if (c === Infinity) continue;
+      // ZOC额外消耗：进入ZOC格子额外+1
+      var zocPenalty = (zoc[key(nx, ny)]) ? 1 : 0;
+      c += zocPenalty;
+      var nr = cur.r - c;
+      if (nr < 0) continue;
+      var nk = key(nx, ny);
+      if (best[nk] !== undefined && best[nk] >= nr) continue;
+      best[nk] = nr; parent[nk] = ck;
+      zocCosts[nk] = zocPenalty;
+      frontier.push({ x: nx, y: ny, r: nr });
+    }
+  }
+  for (var k in best) {
+    var p = k.split(',');
+    cells.push({ x: +p[0], y: +p[1], r: best[k], stop: !unitAt(+p[0], +p[1], u.no), zoc: zocCosts[k] || 0 });
+  }
+  return { cells: cells, best: best, parent: parent, tmp: tmp, form: form, zoc: zoc, zocCosts: zocCosts };
+}
+
+function buildPath(res, tx, ty) {
+  var path = [], k = key(tx, ty), guard = 0;
+  while (k && guard++ < 400) {
+    var p = k.split(',');
+    path.unshift({ x: +p[0], y: +p[1] });
+    k = res.parent[k];
+  }
+  return path;
+}
+
+/* SECTION: engine-atk-bfs */
+// 攻击判定：读取攻击距离（含场地效果），四向 BFS 延展
+function atkRangeOf(u, pos) {
+  var px = pos ? pos.x : u.x, py = pos ? pos.y : u.y;
+  var bonus = fieldEffectAt(px, py).atkRangeBonus;
+  return Math.max(0, u.base.skill.range + bonus);
+}
+
+function computeAtk(u, pos) {
+  var px = pos ? pos.x : u.x, py = pos ? pos.y : u.y;
+  var range = atkRangeOf(u, pos);
+  var dist = {}, cells = [];
+  if (range <= 0) return { cells: cells, range: 0 };
+  dist[key(px, py)] = 0;
+  var q = [{ x: px, y: py, d: 0 }];
+  while (q.length) {
+    var cur = q.shift();
+    if (cur.d >= range) continue;
+    for (var i = 0; i < DIRS.length; i++) {
+      var nx = cur.x + DIRS[i][0], ny = cur.y + DIRS[i][1];
+      if (!inMap(nx, ny)) continue;
+      var nk = key(nx, ny);
+      if (dist[nk] !== undefined) continue;
+      dist[nk] = cur.d + 1;
+      cells.push({ x: nx, y: ny, d: cur.d + 1 });
+      q.push({ x: nx, y: ny, d: cur.d + 1 });
+    }
+  }
+  return { cells: cells, range: range };
+}
+
+/* SECTION: engine-attack-fn */
+// 攻击函数：敌方血量 = 敌方血量 - 技能伤害 * 属性倍率（庇护再减免 10 点）
+function doAttack(atk, def) {
+  var sk = atk.base.skill;
+  var mult = TYPE_CHART[def.base.type][atk.base.type]; // 受击方那一行，攻击方属性那一列
+  var raw = sk.dmg * mult;
+  var reduce = dmgReduceOf(def.no);
+  var final = Math.max(0, raw - reduce);
+  def.hp -= final;
+
+  var multTxt = mult === 1 ? '1 倍' : (mult > 1 ? mult + ' 倍（克制）' : mult + ' 倍（被抗）');
+  logAdd('<b>' + atk.base.name + '</b> 对 <b>' + def.base.name + '</b> 使用 ' + sk.name +
+    '：' + sk.dmg + ' × ' + multTxt + (reduce > 0 ? ' − 庇护 ' + reduce : '') +
+    ' = <b>' + final + '</b> 点伤害', 'dmg');
+
+  var applied = [];
+  for (var i = 0; i < sk.effects.length; i++) {
+    var e = sk.effects[i];
+    var b = addBuff(def.no, e.tag, e.code, e.dur, e.unit);
+    if (b) applied.push(b.name + ' ' + e.dur + (e.unit === 'turn' ? ' 回合' : ' 次'));
+  }
+  if (applied.length) logAdd('附加效果：' + applied.join('、'), 'sys');
+
+  consumeUseBuffs(atk.no);
+  atk.canAct = false;
+  S.sel = null;
+  deathCheck(def);
+  return final;
+}
+
+function deathCheck(u) {
+  if (u.hp > 0 || !u.alive) return false;
+  u.hp = 0;
+  u.alive = false;
+  u.canAct = false;
+  logAdd('<b>' + u.base.name + '</b> 血量归零，存活状态变为「否」', 'dmg');
+  if (u.side === 1) { S.A1 -= 1; } else { S.A2 -= 1; }
+  // 清除其身上的 buff
+  var keep = [];
+  for (var i = 0; i < S.buffs.length; i++) if (S.buffs[i].no !== u.no) keep.push(S.buffs[i]);
+  S.buffs = keep;
+  victoryCheck();
+  return true;
+}
+
+function victoryCheck() {
+  if (S.A1 > 0 && S.A2 > 0) return false;
+  S.phase = 'gameover';
+  S.screen = 'gameover';
+  S.busy = false;
+  S.sel = null; S.tempPos = null; S.moveRange = null; S.atkRange = null; S.target = null;
+  logAdd(S.A1 === 0 ? '游戏结束，玩家二获胜' : '游戏结束，玩家一获胜', 'ok');
+  return true;
+}
+
+/* SECTION: engine-deploy */
+function deployCells() { return S.deploy.player === 1 ? DEPLOY_CELLS_P1 : DEPLOY_CELLS_P2; }
+
+function isDeployCell(x, y) {
+  var c = deployCells();
+  for (var i = 0; i < c.length; i++) if (c[i][0] === x && c[i][1] === y) return true;
+  return false;
+}
+
+function placedAt(x, y) {
+  var l = S.deploy.placed;
+  for (var i = 0; i < l.length; i++) if (l[i].x === x && l[i].y === y) return l[i];
+  return null;
+}
+
+function deployReset() {
+  S.deploy.picked = null; S.deploy.pickFrom = null; S.deploy.pickCell = null;
+}
+
+// 放置判定函数：n=2 时确定键亮起
+function deployReady() { return S.deploy.n >= DEPLOY_LIMIT; }
+
+function deployDoPlace(x, y) {
+  var d = S.deploy;
+  // 记录的是场上已放置的宝可梦时，点空格为「移动到该格」，不新增、不计数
+  if (d.pickFrom === 'board' && d.pickCell) {
+    var list = d.placed;
+    for (var m = 0; m < list.length; m++) {
+      if (list[m].x === d.pickCell.x && list[m].y === d.pickCell.y) { list[m].x = x; list[m].y = y; break; }
+    }
+    logAdd(playerLabel(d.player) + ' 将 <b>' + getPokemon(d.picked).name + '</b> 移至 (' + x + ',' + y + ')，n=' + d.n + ' 不变', 'sys');
+    deployReset();
+    S.phase = 'idle';
+    render();
+    return;
+  }
+  if (d.n >= DEPLOY_LIMIT) {
+    openModal({
+      kind: 'limit',
+      title: '提示',
+      body: '<div class="phase-modal"><div class="big" style="font-size:22px">已达到放置上限</div>' +
+        '<div class="small">每位玩家最多放置 ' + DEPLOY_LIMIT + ' 只宝可梦</div></div>',
+      closable: true,
+      buttons: [{ text: '知道了', cls: 'btn-primary', act: function () { closeModal(); } }]
+    });
+    deployReset();
+    S.phase = 'idle';
+    render();
+    return;
+  }
+  d.placed.push({ id: d.picked, x: x, y: y });
+  d.n += 1;
+  logAdd(playerLabel(d.player) + ' 放置 <b>' + getPokemon(d.picked).name + '</b> 于 (' + x + ',' + y + ')，当前 n=' + d.n,
+    d.player === 1 ? 'p1' : 'p2');
+  deployReset();
+  S.phase = 'idle';
+  render();
+}
+
+function deployDoDelete() {
+  var d = S.deploy;
+  if (d.pickFrom === 'board' && d.pickCell) {
+    var list = d.placed, keep = [];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].x === d.pickCell.x && list[i].y === d.pickCell.y) {
+        logAdd(playerLabel(d.player) + ' 撤下 <b>' + getPokemon(list[i].id).name + '</b>，n=' + (d.n - 1), 'sys');
+        continue;
+      }
+      keep.push(list[i]);
+    }
+    d.placed = keep;
+    d.n = Math.max(0, d.n - 1);
+  } else {
+    logAdd('已清空选择', 'sys');
+  }
+  deployReset();
+  S.phase = 'idle';
+  render();
+}
+
+// 替换：将该格子的宝可梦替换为右侧信息栏的宝可梦，并记录被换下的宝可梦
+function deployDoReplace(x, y) {
+  var d = S.deploy;
+  var cell = placedAt(x, y);
+  if (!cell) return;
+  var oldId = cell.id;
+  cell.id = d.picked;
+  logAdd(playerLabel(d.player) + ' 将 (' + x + ',' + y + ') 的 <b>' + getPokemon(oldId).name +
+    '</b> 替换为 <b>' + getPokemon(d.picked).name + '</b>', 'sys');
+  d.picked = oldId;
+  d.pickFrom = 'list';
+  d.pickCell = null;
+  S.phase = 'select';
+  render();
+}
+
+/* SECTION: engine-battle-setup */
+function startBattle() {
+  S.units = []; S.buffs = []; S.nextNo = 1;
+  S.A1 = 2; S.A2 = 2;
+  var plans = [S.deployPlans[1], S.deployPlans[2]];
+  for (var p = 0; p < plans.length; p++) {
+    for (var i = 0; i < plans[p].length; i++) {
+      var it = plans[p][i];
+      var base = getPokemon(it.id);
+      S.units.push({
+        no: S.nextNo++,
+        base: base,
+        side: p + 1,
+        x: it.x, y: it.y,
+        hp: base.hp,
+        alive: true,     // 所有存活状态变为「是」
+        canAct: false    // 所有可行动置为「否」
+      });
+    }
+  }
+  S.screen = 'battle';
+  S.current = 1;
+  S.phase = 'idle';
+  // 所有单位进入待机动作（循环播放）
+  if (typeof setAction === 'function') {
+    for (var q = 0; q < S.units.length; q++) setAction(S.units[q].no, 'idle');
+  }
+  S.logs = []; S.logSeq = 0;
+  logAdd('战斗页面加载完毕：生成统一宝可梦战斗结构体，A1=' + S.A1 + '，A2=' + S.A2, 'ok');
+  logAdd('阵营与额外信息已记录，全部单位存活=是、可行动=否', 'sys');
+  enterPlayerPhase(1, true);
+}
+
+/* SECTION: engine-turn */
+function enterPlayerPhase(side, withModal) {
+  S.current = side;
+  S.phase = 'idle';
+  S.sel = null; S.tempPos = null; S.moveRange = null; S.atkRange = null; S.target = null;
+  S.busy = false;
+  for (var i = 0; i < S.units.length; i++) {
+    var u = S.units[i];
+    if (!u.alive) continue;
+    u.canAct = (u.side === side);
+  }
+  logAdd('—— ' + playerLabel(side) + ' 行动阶段开始，可行动置为「是」 ——', side === 1 ? 'p1' : 'p2');
+  render();
+  if (withModal) {
+    openModal({
+      title: '',
+      body: '<div class="phase-modal"><div class="big" style="color:' + (side === 1 ? 'var(--p1)' : 'var(--p2)') + '">' +
+        playerLabel(side) + ' 行动</div><div class="small">点击任意位置继续</div></div>',
+      dismissOnClick: true
+    });
+  }
+}
+
+function endTurn() {
+  var side = S.current;
+  tickBuffs(side);
+  var next = side === 1 ? 2 : 1;
+  logAdd(playerLabel(side) + ' 结束回合' + (S.buffs.length ? '，结算回合型 Buff' : ''), 'sys');
+  enterPlayerPhase(next, true);
+}
+
+/* SECTION: engine-battle-actions */
+function selectUnit(u) {
+  if (S.screen !== 'battle' || S.busy) return;
+  if (S.phase !== 'idle') return;
+  if (!u || !u.alive) return;
+  if (u.side !== S.current) { toast('该宝可梦属于' + playerLabel(u.side) + '，当前不是其行动阶段', 'warn'); return; }
+  if (!u.canAct) { toast(u.base.name + ' 本回合已行动（可行动=否）', 'warn'); return; }
+  // 进入「移动计算状态」
+  S.sel = u.no;
+  S.phase = 'moveCalc';
+  S.moveRange = computeMove(u, null);
+  var tm = S.moveRange.tmp;
+  var zocCount = 0;
+  if (S.moveRange && S.moveRange.zoc) { for (var _k in S.moveRange.zoc) zocCount++; }
+  logAdd('<b>' + u.base.name + '</b> 进入移动计算状态：移动力 ' + u.base.move +
+    (tm !== u.base.move ? ' → 临时移动力 <b>' + tm + '</b>' : '') +
+    (zocCount ? '，敌方ZOC覆盖 <b>' + zocCount + '</b> 格（进入额外消耗+1）' : '') +
+    '（' + (S.moveRange.form === 'land' ? '陆行' : '移动形态') + '，山峰不可扩展）',
+    u.side === 1 ? 'p1' : 'p2');
+  render();
+}
+
+function tryMoveTo(x, y) {
+  var u = unitByNo(S.sel);
+  if (!u || !S.moveRange) return;
+  var k = key(x, y);
+  var cellInfo = null;
+  for (var i = 0; i < S.moveRange.cells.length; i++) {
+    if (S.moveRange.cells[i].x === x && S.moveRange.cells[i].y === y) cellInfo = S.moveRange.cells[i];
+  }
+  if (!cellInfo) { toast('该格不在高亮范围内', 'warn'); return; }
+  var occ = unitAt(x, y, u.no);
+  if (occ) {
+    if (occ.side === u.side) toast('该格已被己方 ' + occ.base.name + ' 占据，不可停留', 'warn');
+    // 阵营不一致：没有反应
+    return;
+  }
+  // 移动状态：记录临时移动位置，不改变宝可梦战斗信息
+  var path = buildPath(S.moveRange, x, y);
+  S.phase = 'anim';
+  S.busy = true;
+  logAdd('<b>' + u.base.name + '</b> 移动至 (' + x + ',' + y + ')（临时位置，未写入战斗信息）', u.side === 1 ? 'p1' : 'p2');
+  render();
+  animateAlong(u, path, function () {
+    S.busy = false;
+    S.moveRange = null;
+    S.phase = 'movedChoice';
+    render();
+    openMovedChoice(u);
+  });
+}
+
+function cancelMoveCalc() {
+  var u = unitByNo(S.sel);
+  S.sel = null; S.moveRange = null; S.tempPos = null; S.phase = 'idle';
+  if (u) logAdd(u.base.name + ' 取消移动计算（右键取消）', 'sys');
+  render();
+}
+
+// 移动后选择状态：右键 → 立刻读取战斗信息中的位置并贴回
+function revertToRecorded() {
+  var u = unitByNo(S.sel);
+  if (!u) return;
+  logAdd('<b>' + u.base.name + '</b> 返回记录位置 (' + u.x + ',' + u.y + ')', 'sys');
+  S.tempPos = null; S.moveRange = null; S.atkRange = null;
+  S.sel = null; S.phase = 'idle';
+  render();
+}
+
+function chooseWait() {
+  var u = unitByNo(S.sel);
+  if (!u) return;
+  if (S.tempPos) { u.x = S.tempPos.x; u.y = S.tempPos.y; }
+  u.canAct = false;
+  logAdd('<b>' + u.base.name + '</b> 选择「等待」：坐标更新为 (' + u.x + ',' + u.y + ')，可行动=否', u.side === 1 ? 'p1' : 'p2');
+  S.tempPos = null; S.sel = null; S.moveRange = null; S.atkRange = null;
+  S.phase = 'idle';
+  render();
+}
+
+function chooseAttack() {
+  var u = unitByNo(S.sel);
+  if (!u) return;
+  S.atkRange = computeAtk(u, S.tempPos);
+  S.phase = 'atkCalc';
+  var bonus = fieldEffectAt(S.tempPos ? S.tempPos.x : u.x, S.tempPos ? S.tempPos.y : u.y).atkRangeBonus;
+  logAdd('<b>' + u.base.name + '</b> 进入攻击判定状态：攻击距离 ' + u.base.skill.range +
+    (bonus ? ' + 场地效果 ' + bonus : '') + ' = <b>' + S.atkRange.range + '</b> 格', u.side === 1 ? 'p1' : 'p2');
+  if (!S.atkRange.cells.length) logAdd('攻击距离为 0，无可攻击范围', 'sys');
+  render();
+}
+
+function backToMovedChoice() {
+  var u = unitByNo(S.sel);
+  S.atkRange = null; S.target = null;
+  S.phase = 'movedChoice';
+  if (u) logAdd(u.base.name + ' 返回移动后选择状态', 'sys');
+  render();
+  if (u) openMovedChoice(u);
+}
+
+function tryTargetUnit(x, y) {
+  var u = unitByNo(S.sel);
+  if (!u || !S.atkRange) return;
+  var inRange = false;
+  for (var i = 0; i < S.atkRange.cells.length; i++) {
+    if (S.atkRange.cells[i].x === x && S.atkRange.cells[i].y === y) inRange = true;
+  }
+  if (!inRange) return;
+  var t = unitAt(x, y, u.no);
+  if (!t) { toast('该格没有宝可梦', 'warn'); return; }
+  if (t.side === u.side) { toast('目标与自身阵营相同，不进行操作', 'warn'); return; }
+  S.target = t.no;
+  S.phase = 'atkReady';
+  logAdd('选定目标 <b>' + t.base.name + '</b>，进入攻击预备状态', u.side === 1 ? 'p1' : 'p2');
+  render();
+  openAttackConfirm(u, t);
+}
+
+function confirmAttack() {
+  var u = unitByNo(S.sel), t = unitByNo(S.target);
+  closeModal();
+  if (!u || !t) { S.phase = 'idle'; render(); return; }
+  var pos = S.tempPos;
+  if (pos) { u.x = pos.x; u.y = pos.y; S.tempPos = null; }
+  var defNo = t.no;
+  S.moveRange = null; S.atkRange = null; S.target = null;
+  S.busy = true;
+  S.phase = 'anim';
+  render();
+
+  // 攻击动作：有贴图则播放至结束后结算，无贴图立即结算
+  function settle() {
+    S.busy = false;
+    doAttack(u, t);
+    // 胜利判定已在 doAttack -> deathCheck 中完成，此处不得覆盖其结果
+    if (S.screen === 'gameover') { render(); openGameOver(); return; }
+    S.phase = 'idle';
+    S.sel = null;
+    render();
+    showDamageFx(defNo); // 必须在 render 之后，否则特效节点会被重建的 DOM 清除
+  }
+  if (typeof playAttackAction === 'function') playAttackAction(u, t, settle);
+  else settle();
+}
+
+function backToAtkCalc() {
+  S.target = null;
+  S.phase = 'atkCalc';
+  closeModal();
+  logAdd('返回攻击判定状态', 'sys');
+  render();
+}
+
+/* SECTION: engine-rightclick */
+// 右键功能按当前界面状态切换，优先级：部署界面 > 战斗界面 > 胜利/失败界面
+function onRightClick() {
+  if (S.screen === 'deploy') { deployRightClick(); return true; }
+  if (S.screen === 'battle') { battleRightClick(); return true; }
+  if (S.screen === 'gameover') { backToTitle(); return true; }
+  return false;
+}
+
+function deployRightClick() {
+  if (modalOpen()) { closeModal(); return; }
+  if (S.phase === 'select') { deployReset(); S.phase = 'idle'; logAdd('取消选择（右键）', 'sys'); render(); }
+  else toast('部署阶段：先放置 2 只宝可梦，再点「确定」', 'warn');
+}
+
+function battleRightClick() {
+  if (S.busy) return;
+  if (modalOpen()) {
+    var tag = document.getElementById('modalLayer').getAttribute('data-kind');
+    if (tag === 'atkReady') { backToAtkCalc(); return; }
+    if (tag === 'movedChoice') { closeModal(); revertToRecorded(); return; }
+    closeModal();
+    return;
+  }
+  switch (S.phase) {
+    case 'moveCalc': cancelMoveCalc(); return;
+    case 'atkCalc': backToMovedChoice(); return;
+    case 'movedChoice': closeModal(); revertToRecorded(); return;
+    case 'idle': askEndTurn(); return;
+    default: return;
+  }
+}
+
+function askEndTurn() {
+  openModal({
+    kind: 'endTurn',
+    title: '是否结束回合',
+    body: '<div class="rules" style="text-align:center;padding:8px 0 2px">' +
+      '当前为 <b style="color:' + (S.current === 1 ? 'var(--p1)' : 'var(--p2)') + '">' + playerLabel(S.current) + '</b> 的行动阶段。<br>' +
+      '左键确认将进入 ' + playerLabel(S.current === 1 ? 2 : 1) + ' 的行动阶段；右键返回当前阶段。</div>',
+    buttons: [
+      { text: '结束回合', cls: 'btn-ghost', act: function () { closeModal(); endTurn(); } },
+      { text: '继续行动', cls: 'btn-ghost', act: function () { closeModal(); } }
+    ]
+  });
+}
+
+/* SECTION: engine-flow */
+function bootGame() {
+  S.grid = MAP_PRESETS[S.mapPreset].build();
+  S.deploy = { player: 1, placed: [], picked: null, pickFrom: null, pickCell: null, n: 0 };
+  S.deployPlans = { 1: [], 2: [] };
+  S.units = []; S.buffs = []; S.logs = []; S.logSeq = 0;
+  S.A1 = 2; S.A2 = 2;
+  S.screen = 'deploy';
+  S.phase = 'idle';
+  S.sel = null; S.tempPos = null; S.moveRange = null; S.atkRange = null; S.target = null; S.busy = false;
+  logAdd('读取「地图资源」：' + MAP_SIZE + '×' + MAP_SIZE + ' 格子（x:0~9，y:0~9），预设「' + MAP_PRESETS[S.mapPreset].name + '」', 'ok');
+  logAdd('调用布置系统 —— <b>玩家一放置</b>，可放置格子 (0,0)(1,0)(0,1)(1,1)', 'p1');
+  enterDeploy(1);
+}
+
+function enterDeploy(player) {
+  S.screen = 'deploy';
+  S.deploy.player = player;
+  S.deploy.placed = (S.deployPlans[player] || []).slice();
+  S.deploy.n = S.deploy.placed.length;
+  deployReset();
+  S.phase = 'idle';
+  render();
+}
+
+function deployConfirm() {
+  if (!deployReady()) { toast('需要放置满 ' + DEPLOY_LIMIT + ' 只宝可梦', 'warn'); return; }
+  var p = S.deploy.player;
+  S.deployPlans[p] = S.deploy.placed.slice();
+  logAdd(playerLabel(p) + ' 布置完成（n=' + S.deploy.n + '），确定键亮起并跳转', 'ok');
+  closeModal();
+  if (p === 1) {
+    logAdd('调用布置系统 —— <b>玩家二放置</b>', 'p2');
+    enterDeploy(2);
+    toast('轮到玩家二放置');
+  } else {
+    startBattle();
+  }
+}
+
+function backToTitle() {
+  closeModal();
+  S = newState();
+  S.mapPreset = window.__lastPreset || 'plain';
+  renderTitle();
+  if (typeof renderSpriteStatus === 'function') renderSpriteStatus();
+  render();
+}
+
+</script>
+<script>
+/* ============================================================
+   宝可梦战棋 Demo — 贴图与动画驱动层（可插拔素材槽）
+   素材目录：img/tiles/     地块贴图
+             img/sprites/   角色动作帧
+   缺图时自动回退为文字色块，放几张显示几张，无需改代码。
+   ============================================================ */
+
+/* SECTION: sprite-config */
+// 贴图目录：默认与本 HTML 文件同级的 img/ 文件夹
+var SPRITE_ROOT = 'img/';
+// 自动探测顺序：同级 → 逐级向上（让 history/ 下的副本也能读到项目根的同一份素材）
+var ROOT_CANDIDATES = ['img/', '../img/', '../../img/', '../../../img/'];
+
+// 地块贴图文件名（对应文件1 地图数据的 Id）
+var TILE_FILES = {
+  '01': 'tile_grassland.png',   // 平原
+  '02': 'tile_highland.png',    // 丘陵
+  '03': 'tile_mountain.png'     // 山峰
+};
+
+// 角色贴图目录与动画参数（对应文件2 宝可梦 Id）
+// facing: 原图朝向；相反方向由 CSS 镜像自动生成，无需再出一套图
+var UNIT_SPRITES = {
+  '01': { dir: 'pikachu',   facing: 'left', fps: { idle: 6, run: 8, attack: 10 } },
+  '02': { dir: 'bulbasaur', facing: 'left', fps: { idle: 6, run: 8, attack: 10 } }
+};
+
+var ACTION_LIST = ['idle', 'run', 'attack'];  // 待机 / 移动 / 攻击
+var LOOP_ACTIONS = { idle: true, run: true, attack: false }; // attack 播放至结束
+var FRAME_LIMIT = 24;   // 自动探测的最大帧数
+var PROBE_TIMEOUT = 4000;
+
+// 像素风素材请置为 true（放大时保持锐利边缘）；手绘/高清立绘置为 false
+var PIXEL_ART = true;
+
+/* SECTION: sprite-state */
+var SPR = {
+  tiles: {},      // '01' -> true/false 是否有图
+  units: {},      // '01' -> { idle:[1,2..], run:[..], attack:[..] }
+  scanned: false,
+  scanning: false,
+  root: null,     // 实际探测到的素材根目录
+  notes: []
+};
+
+var ANIMS = {};   // 场内编号 -> {action, idx, acc, once, onEnd, face}
+var rafId = null;
+var lastTs = 0;
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+// 像素风素材统一附加锐化类名
+function pixelCls() { return PIXEL_ART ? ' pixelated' : ''; }
+
+function tileSrc(id) { return SPRITE_ROOT + 'tiles/' + TILE_FILES[id]; }
+function frameSrc(dir, action, i) {
+  return SPRITE_ROOT + 'sprites/' + dir + '/' + dir + '_' + action + '_' + pad2(i) + '.png';
+}
+
+function hasTile(id) { return !!SPR.tiles[id]; }
+
+// 只要任意动作有帧就算有贴图（支持只放一两张图先试）
+function hasUnitSprite(pid) {
+  var u = SPR.units[pid];
+  if (!u) return false;
+  for (var i = 0; i < ACTION_LIST.length; i++) {
+    if (u[ACTION_LIST[i]] && u[ACTION_LIST[i]].length) return true;
+  }
+  return false;
+}
+
+function framesOf(pid, action) {
+  var u = SPR.units[pid];
+  if (!u || !u[action] || !u[action].length) return [];
+  return u[action];
+}
+
+// 该动作缺帧时的回退顺序：idle → run → attack
+var FALLBACK_ORDER = ['idle', 'run', 'attack'];
+
+function fallbackAction(pid, action) {
+  if (framesOf(pid, action).length) return action;
+  for (var i = 0; i < FALLBACK_ORDER.length; i++) {
+    if (framesOf(pid, FALLBACK_ORDER[i]).length) return FALLBACK_ORDER[i];
+  }
+  return action;
+}
+
+/* SECTION: sprite-probe */
+function probe(src, cb, timeout) {
+  var done = false;
+  // 环境不支持 Image 时直接判为缺图，走文字回退，不中断启动流程
+  if (typeof Image === 'undefined') { cb(false, 0, 0); return; }
+  var im;
+  try { im = new Image(); } catch (e) { cb(false, 0, 0); return; }
+  var timer = setTimeout(function () { if (!done) { done = true; cb(false, 0, 0); } }, timeout || PROBE_TIMEOUT);
+  im.onload = function () {
+    if (done) return; done = true; clearTimeout(timer);
+    cb(true, im.naturalWidth, im.naturalHeight);
+  };
+  im.onerror = function () {
+    if (done) return; done = true; clearTimeout(timer);
+    cb(false, 0, 0);
+  };
+  im.src = src;
+}
+
+// 连续帧探测：从 01 开始，遇到第一张缺失即停止
+function probeFrames(dir, action, cb) {
+  var found = [];
+  (function next(i) {
+    if (i > FRAME_LIMIT) { cb(found); return; }
+    probe(frameSrc(dir, action, i), function (ok, w, h) {
+      if (!ok) { cb(found); return; }
+      found.push({ i: i, w: w, h: h });
+      next(i + 1);
+    });
+  })(1);
+}
+
+/* SECTION: sprite-root-detect */
+// 素材根目录自动探测：优先同级 img/，找不到再逐级向上找。
+// 这样无论从项目根目录还是历史副本打开页面，都读取同一份素材，
+// 素材只需放在项目根目录的 img/ 一处。
+var DETECT_TIMEOUT = 1500;
+
+function detectSpriteRoot(done) {
+  var canaries = [];
+  for (var t in TILE_FILES) canaries.push('tiles/' + TILE_FILES[t]);
+  for (var p in UNIT_SPRITES) {
+    var d = UNIT_SPRITES[p].dir;
+    canaries.push('sprites/' + d + '/' + d + '_idle_01.png');
+    canaries.push('sprites/' + d + '/' + d + '_run_01.png');
+    canaries.push('sprites/' + d + '/' + d + '_attack_01.png');
+  }
+  var ci = 0;
+  if (canaries.length === 0) { done(SPRITE_ROOT); return; }
+  (function tryRoot() {
+    if (ci >= ROOT_CANDIDATES.length) { done(SPRITE_ROOT); return; }
+    var root = ROOT_CANDIDATES[ci++];
+    var left = canaries.length, hit = false;
+    canaries.forEach(function (c) {
+      probe(root + c, function (ok) {
+        if (ok) hit = true;
+        if (--left === 0) {
+          if (hit) { SPRITE_ROOT = root; done(root); }
+          else tryRoot();
+        }
+      }, DETECT_TIMEOUT);
+    });
+  })();
+}
+
+function scanSprites(done) {
+  if (SPR.scanning) return;
+  SPR.scanning = true;
+  detectSpriteRoot(function (root) {
+    SPR.root = root;
+    scanAssets(done);
+  });
+}
+
+function scanAssets(done) {
+  SPR.notes = [];
+  var pending = 0, finished = false;
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    SPR.scanning = false;
+    SPR.scanned = true;
+    if (done) done();
+  }
+  function step() { pending--; if (pending <= 0) finish(); }
+
+  // 地块
+  var tileIds = [];
+  for (var t in TILE_FILES) tileIds.push(t);
+  tileIds.forEach(function (id) {
+    pending++;
+    probe(tileSrc(id), function (ok, w, h) {
+      SPR.tiles[id] = ok;
+      if (ok) SPR.notes.push('地块 ' + TERRAINS[id].name + '：' + TILE_FILES[id] + '（' + w + '×' + h + '）');
+      step();
+    });
+  });
+
+  // 角色动作帧
+  var pids = [];
+  for (var p in UNIT_SPRITES) pids.push(p);
+  pids.forEach(function (pid) {
+    var cfg = UNIT_SPRITES[pid];
+    var base = getPokemon(pid);
+    if (!SPR.units[pid]) SPR.units[pid] = {};
+    ACTION_LIST.forEach(function (act) {
+      pending++;
+      probeFrames(cfg.dir, act, function (list) {
+        SPR.units[pid][act] = list;
+        if (list.length) {
+          SPR.notes.push((base ? base.name : pid) + ' · ' + act + '：' + list.length + ' 帧（' +
+            list[0].w + '×' + list[0].h + '）');
+        }
+        step();
+      });
+    });
+  });
+
+  if (pending === 0) finish();
+}
+
+/* SECTION: sprite-anim */
+function animOf(no) {
+  if (!ANIMS[no]) ANIMS[no] = { action: 'idle', idx: 0, acc: 0, once: false, onEnd: null, face: null };
+  return ANIMS[no];
+}
+
+function setAction(no, action, face) {
+  var a = animOf(no);
+  if (a.action === action && !a.once) {
+    if (face && a.face !== face) { a.face = face; var uu = unitByNo(no); if (uu) paintSprite(uu); }
+    return;
+  }
+  a.action = action; a.idx = 0; a.acc = 0; a.once = !LOOP_ACTIONS[action];
+  a.onEnd = null;
+  if (face) a.face = face;
+  startTicker();   // 循环动作同样需要时钟，否则帧不会推进
+}
+
+// 播放一次（attack）：播放至结束后回调
+function playOnce(no, action, onEnd) {
+  var a = animOf(no);
+  a.action = action; a.idx = 0; a.acc = 0; a.once = true; a.onEnd = onEnd || null;
+  startTicker();
+}
+
+function startTicker() { if (rafId === null) { lastTs = 0; rafId = requestAnimationFrame(tick); } }
+function stopTicker() { if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; } }
+
+function tick(ts) {
+  rafId = requestAnimationFrame(tick);
+  if (!lastTs) { lastTs = ts; return; }
+  var dt = Math.min(200, ts - lastTs);
+  lastTs = ts;
+
+  for (var no in ANIMS) {
+    var a = ANIMS[no];
+    var u = unitByNo(+no);
+    if (!u || !u.alive) continue;
+    var eff = fallbackAction(u.base.id, a.action);
+    var frames = framesOf(u.base.id, eff);
+    if (!frames.length) continue;
+
+    var fps = (UNIT_SPRITES[u.base.id] && UNIT_SPRITES[u.base.id].fps[a.action]) || 8;
+    a.acc += dt;
+    var dur = 1000 / fps;
+    while (a.acc >= dur) {
+      a.acc -= dur;
+      if (a.idx < frames.length - 1) {
+        a.idx++;
+      } else if (a.once) {
+        // 播放至结束
+        var cb = a.onEnd;
+        a.once = false; a.onEnd = null; a.action = 'idle'; a.idx = 0; a.acc = 0;
+        paintSprite(u);
+        if (cb) cb();
+        break;
+      } else {
+        a.idx = 0; // 循环播放
+      }
+    }
+    paintSprite(u);
+  }
+}
+
+// 只改 img.src 与镜像，不重建 DOM，避免闪烁
+function paintSprite(u) {
+  var img = document.querySelector('.spr[data-no="' + u.no + '"]');
+  if (!img) return;
+  var a = animOf(u.no);
+  var eff = fallbackAction(u.base.id, a.action);
+  var frames = framesOf(u.base.id, eff);
+  if (!frames.length) return;
+  var f = frames[Math.min(a.idx, frames.length - 1)];
+  var src = frameSrc(UNIT_SPRITES[u.base.id].dir, eff, f.i);
+  if (img.getAttribute('src') !== src) img.setAttribute('src', src);
+  var want = a.face || unitFacing(u);
+  var need = (UNIT_SPRITES[u.base.id].facing === 'left') ? (want === 'right') : (want === 'left');
+  if (need) img.classList.add('flip'); else img.classList.remove('flip');
+}
+
+// 由上一次移动方向推断朝向；未移动过时面向敌方
+function unitFacing(u) {
+  var a = ANIMS[u.no];
+  if (a && a.face) return a.face;
+  for (var i = 0; i < S.units.length; i++) {
+    var o = S.units[i];
+    if (o.side !== u.side && o.alive) return (o.x >= u.x) ? 'right' : 'left';
+  }
+  return 'right';
+}
+
+function setFacing(no, face) {
+  var a = animOf(no);
+  if (a.face !== face) { a.face = face; var u = unitByNo(no); if (u) paintSprite(u); }
+}
+
+// 攻击动作：有贴图则播放至结束后结算，无贴图立即结算
+function playAttackAction(atk, def, cb) {
+  if (!hasUnitSprite(atk.base.id) || !framesOf(atk.base.id, 'attack').length) { cb(); return; }
+  setFacing(atk.no, def.x >= atk.x ? 'right' : 'left');
+  setAction(def.no, 'idle');
+  playOnce(atk.no, 'attack', cb);
+}
+
+// 移动动作：循环播放 run，并按路径逐格转向
+function playMoveAction(u, onStep, onEnd) {
+  if (!hasUnitSprite(u.base.id) || !framesOf(u.base.id, 'run').length) return false;
+  setAction(u.no, 'run');
+  return true;
+}
+
+function spriteStatusText() {
+  if (!SPR.scanned) return '尚未扫描贴图';
+  var n = 0;
+  for (var t in SPR.tiles) if (SPR.tiles[t]) n++;
+  var m = 0;
+  for (var p in SPR.units) for (var a in SPR.units[p]) m += SPR.units[p][a].length;
+  return '地块 ' + n + '/' + Object.keys(TILE_FILES).length + ' · 动作帧 ' + m + ' 张';
+}
+
+</script>
+<script>
+/* ============================================================
+   宝可梦战棋 Demo — 渲染、弹窗与输入层
+   所有图像均以文字与色块呈现
+   ============================================================ */
+
+/* SECTION: ui-refs */
+var $ = function (id) { return document.getElementById(id); };
+var boardEl = $('board'), layerEl = $('modalLayer'), toastEl = $('toast');
+var uiInspect = null;     // 信息栏当前查看的场内编号
+var uiPick = null;        // 战斗中左侧查看的宝可梦
+var toastTimer = null;
+var longPressTimer = null;
+
+/* SECTION: ui-modal */
+function modalOpen() { return !layerEl.classList.contains('hidden'); }
+
+function openModal(opt) {
+  layerEl.setAttribute('data-kind', opt.kind || 'info');
+  var html = '<div class="modal' + (opt.wide ? ' wide' : '') + '" role="dialog" aria-modal="true">';
+  if (opt.title) html += '<div class="modal-h">' + opt.title + '</div>';
+  html += '<div class="modal-b">' + opt.body + '</div>';
+  if (opt.buttons && opt.buttons.length) {
+    html += '<div class="modal-f">';
+    for (var i = 0; i < opt.buttons.length; i++) {
+      html += '<button class="' + (opt.buttons[i].cls || 'btn-ghost') + '" data-mb="' + i + '">' + opt.buttons[i].text + '</button>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+  layerEl.innerHTML = html;
+  layerEl.classList.remove('hidden');
+  if (opt.buttons) {
+    var btns = layerEl.querySelectorAll('[data-mb]');
+    for (var j = 0; j < btns.length; j++) {
+      (function (idx) {
+        btns[idx].addEventListener('click', function () { opt.buttons[idx].act(); });
+      })(j);
+    }
+  }
+  layerEl.onclick = function (e) {
+    if (opt.dismissOnClick) { closeModal(); if (opt.onDismiss) opt.onDismiss(); return; }
+    if (e.target !== layerEl) return;
+    if (opt.closable) { closeModal(); if (opt.onDismiss) opt.onDismiss(); }
+  };
+}
+
+function closeModal() {
+  layerEl.classList.add('hidden');
+  layerEl.innerHTML = '';
+  layerEl.removeAttribute('data-kind');
+}
+
+/* SECTION: ui-toast */
+function toast(msg, cls) {
+  toastEl.className = 'toast' + (cls ? ' ' + cls : '');
+  toastEl.textContent = msg;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { toastEl.classList.add('hidden'); }, 2400);
+}
+
+/* SECTION: ui-fx */
+// 攻击特效以文字呈现（按坐标定位，阵亡单位同样显示）
+function showDamageFx(no) {
+  var u = unitByNo(no);
+  if (!u) return;
+  var cell = boardEl.querySelector('.cell[data-x="' + u.x + '"][data-y="' + u.y + '"]');
+  if (!cell) return;
+  var d = document.createElement('div');
+  d.className = 'fx';
+  d.textContent = u.alive ? '命中' : '击倒';
+  cell.appendChild(d);
+  setTimeout(function () { if (d.parentNode) d.parentNode.removeChild(d); }, 620);
+}
+
+// 移动动画：播放移动动画，期间不可进行输入
+// 有贴图时循环播放 run 动作并按前进方向镜像；无贴图时仅位移
+function animateAlong(u, path, cb) {
+  var hasRun = (typeof hasUnitSprite === 'function' && hasUnitSprite(u.base.id) &&
+    typeof framesOf === 'function' && framesOf(u.base.id, 'run').length > 0);
+  if (hasRun) playMoveAction(u);
+  
+  // 平滑移动：使用 requestAnimationFrame 插值，每格之间插入多帧过渡
+  var STEPS_PER_CELL = 6;  // 每格之间的过渡帧数（越大越平滑，但越慢）
+  var pathIndex = 0;
+  var frameInStep = 0;
+  var animRafId = null;
+  var animLastTs = 0;
+  
+  // 记录路径（含起点）
+  var fullPath = [{ x: u.x, y: u.y }].concat(path);
+  
+  ANIM = { no: u.no, x: u.x, y: u.y };
+  // 在动画开始时才设置 S.tempPos，避免 render() 时角色提前出现在目标格
+  S.tempPos = { x: path[path.length - 1].x, y: path[path.length - 1].y };
+
+  function animFrame(ts) {
+    if (!animLastTs) animLastTs = ts;
+    var dt = Math.min(200, ts - animLastTs);
+    animLastTs = ts;
+    
+    frameInStep += dt;
+    var stepDuration = 1000 / STEPS_PER_CELL;  // 每格过渡耗时（ms）
+    
+    if (frameInStep >= stepDuration && pathIndex < path.length) {
+      frameInStep = 0;
+      pathIndex++;
+      
+      if (pathIndex >= path.length) {
+        // 动画完成
+        ANIM = null;
+        if (typeof setAction === 'function') setAction(u.no, 'idle');
+        renderBoard();
+        cb();
+        return;
+      }
+      
+      var nx = path[pathIndex].x, ny = path[pathIndex].y;
+      var prevX = path[pathIndex - 1].x, prevY = path[pathIndex - 1].y;
+      // 按前进方向转向
+      if (typeof setFacing === 'function') {
+        if (nx > prevX) setFacing(u.no, 'right');
+        else if (nx < prevX) setFacing(u.no, 'left');
+      }
+      ANIM.x = nx; ANIM.y = ny;
+      renderBoard();
+    }
+    
+    animRafId = requestAnimationFrame(animFrame);
+  }
+  
+  animRafId = requestAnimationFrame(animFrame);
+}
+
+/* SECTION: ui-token */
+function typeColor(t) { return TYPE_COLORS[t] || '#c9d2e3'; }
+
+// 角色动作帧贴图；无帧时返回空串，由文字色块兜底
+function spriteImgHTML(u) {
+  if (typeof hasUnitSprite !== 'function' || !hasUnitSprite(u.base.id)) return '';
+  var cfg = UNIT_SPRITES[u.base.id];
+  var a = animOf(u.no);
+  var eff = (typeof fallbackAction === 'function') ? fallbackAction(u.base.id, a.action) : a.action;
+  var frames = framesOf(u.base.id, eff);
+  if (!frames.length) return '';
+  var f = frames[Math.min(a.idx, frames.length - 1)];
+  var want = a.face || unitFacing(u);
+  var flip = (cfg.facing === 'left') ? (want === 'right') : (want === 'left');
+  return '<img class="spr' + (typeof pixelCls === 'function' ? pixelCls() : '') + (flip ? ' flip' : '') +
+    '" data-no="' + u.no + '" alt="' + u.base.name +
+    '" src="' + frameSrc(cfg.dir, eff, f.i) + '">';
+}
+
+function tokenHTML(u) {
+  var p = u.side === 1 ? 'p1' : 'p2';
+  var spr = spriteImgHTML(u);
+  var cls = 'token ' + p + (spr ? ' has-spr' : '') + (u.canAct ? '' : ' spent') + (u.alive ? '' : ' acted');
+  var bs = buffsOf(u.no), bhtml = '';
+  for (var i = 0; i < bs.length; i++) {
+    bhtml += '<span class="buff-i ' + (bs[i].tag === '00' ? 'm' : 'b') + '" title="' + bs[i].name + '">' + bs[i].badge + '</span>';
+  }
+  return '<div class="' + cls + '" data-no="' + u.no + '">' +
+    '<span class="glyph">' + u.base.glyph + '</span>' +
+    '<span class="hpv">' + u.hp + '/' + u.base.hp + '</span>' +
+    spr +
+    (bhtml ? '<span class="buffs">' + bhtml + '</span>' : '') +
+    '</div>';
+}
+
+function deployTokenHTML(item, side) {
+  var base = getPokemon(item.id);
+  var spr = '';
+  if (typeof hasUnitSprite === 'function' && hasUnitSprite(item.id) && UNIT_SPRITES[item.id]) {
+    var act = (typeof fallbackAction === 'function') ? fallbackAction(item.id, 'idle') : 'idle';
+    var fr = framesOf(item.id, act);
+    if (fr.length) {
+      spr = '<img class="spr' + (typeof pixelCls === 'function' ? pixelCls() : '') + '" alt="' + base.name +
+        '" src="' + frameSrc(UNIT_SPRITES[item.id].dir, act, fr[0].i) + '">';
+    }
+  }
+  return '<div class="token ' + (side === 1 ? 'p1' : 'p2') + (spr ? ' has-spr' : '') +
+    '" data-dx="' + item.x + '" data-dy="' + item.y + '">' +
+    '<span class="glyph">' + base.glyph + '</span>' +
+    '<span class="hpv">' + base.hp + '</span>' + spr + '</div>';
+}
+
+/* SECTION: ui-board */
+function renderBoard() {
+  var isDeploy = (S.screen === 'deploy');
+  var hl = {};   // key -> class
+  var i, k;
+
+  if (isDeploy) {
+    var cells = deployCells();
+    for (i = 0; i < cells.length; i++) hl[key(cells[i][0], cells[i][1])] = 'hl-deploy';
+    if (S.deploy.pickCell) hl[key(S.deploy.pickCell.x, S.deploy.pickCell.y)] += ' hl-sel';
+  } else if (S.screen === 'battle') {
+    // ZOC隐性标记：所有敌方单位四向相邻格子标记为ZOC
+    var enemyZoc = getZocCells(S.current);
+    for (var zk in enemyZoc) {
+      if (hl[zk]) {
+        hl[zk] += ' hl-zoc';
+      } else {
+        hl[zk] = 'hl-zoc';
+      }
+    }
+    // 移动范围高亮（ZOC格子用更深的颜色）
+    if (S.moveRange) {
+      for (i = 0; i < S.moveRange.cells.length; i++) {
+        var c = S.moveRange.cells[i];
+        var mk = key(c.x, c.y);
+        if (c.zoc) {
+          // ZOC格子也在移动范围内：保留ZOC高亮，叠加移动高亮
+          hl[mk] = (hl[mk] ? hl[mk] + ' ' : '') + 'hl-zoc-cost hl-move';
+        } else {
+          hl[mk] = c.stop ? 'hl-move' : 'hl-pass';
+        }
+      }
+      var su = unitByNo(S.sel);
+      if (su) hl[key(su.x, su.y)] = (hl[key(su.x, su.y)] || '') + ' hl-origin';
+    }
+    if (S.atkRange) {
+      for (i = 0; i < S.atkRange.cells.length; i++) hl[key(S.atkRange.cells[i].x, S.atkRange.cells[i].y)] = 'hl-atk';
+      var au = unitByNo(S.sel);
+      if (au) {
+        var ax = S.tempPos ? S.tempPos.x : au.x, ay = S.tempPos ? S.tempPos.y : au.y;
+        hl[key(ax, ay)] = (hl[key(ax, ay)] || '') + ' hl-origin';
+      }
+    }
+  }
+
+  var html = '';
+  for (var y = 0; y < MAP_SIZE; y++) {
+    for (var x = 0; x < MAP_SIZE; x++) {
+      k = key(x, y);
+      var t = terrainAt(x, y);
+      var cls = 'cell t' + t.id + (hl[k] ? ' ' + hl[k] : '');
+      var tile = (typeof hasTile === 'function' && hasTile(t.id))
+        ? '<img class="tile-img' + (typeof pixelCls === 'function' ? pixelCls() : '') + '" alt="' + t.name + '" src="' + tileSrc(t.id) + '">'
+        : '';
+      var inner = tile + '<span class="terr">' + t.glyph + '</span>' + (t.height ? '<span class="htn">' + t.height + '</span>' : '');
+
+      if (isDeploy) {
+        var dp = placedAt(x, y);
+        if (dp) inner += deployTokenHTML(dp, S.deploy.player);
+      } else {
+        // 战斗页面与胜利/失败界面都保留场上单位
+        for (i = 0; i < S.units.length; i++) {
+          var u = S.units[i];
+          if (!u.alive) continue;
+          var dp2 = dispPos(u);
+          if (dp2.x === x && dp2.y === y) { inner += tokenHTML(u); break; }
+        }
+      }
+      html += '<div class="' + cls + '" data-x="' + x + '" data-y="' + y + '">' + inner + '</div>';
+    }
+  }
+  boardEl.innerHTML = html;
+}
+
+/* SECTION: ui-legend */
+function renderLegend() {
+  var items = [];
+  items.push('<span><i class="sw" style="background:linear-gradient(150deg,#2b3d5e,#243350)"></i>平原 h0</span>');
+  items.push('<span><i class="sw" style="background:linear-gradient(150deg,#4a4a2e,#3a3c28)"></i>丘陵 h1 攻击距离+1</span>');
+  items.push('<span><i class="sw" style="background:linear-gradient(150deg,#5b4636,#453527)"></i>山峰 h2 陆行不可进入</span>');
+  if (S.screen === 'battle') {
+    items.push('<span><i class="sw" style="background:var(--hl-move)"></i>可移动</span>');
+    items.push('<span><i class="sw" style="background:rgba(74,163,255,.17)"></i>仅可通行</span>');
+    items.push('<span><i class="sw" style="background:rgba(255,92,92,.22)"></i>ZOC（额外消耗+1）</span>');
+    items.push('<span><i class="sw" style="background:var(--hl-atk)"></i>攻击范围</span>');
+  }
+  if (S.screen === 'deploy') items.push('<span><i class="sw" style="background:var(--hl-deploy)"></i>可放置区</span>');
+  $('legend').innerHTML = items.join('');
+}
+
+/* SECTION: ui-topbar */
+function renderTopbar() {
+  var chips = [], title = '宝可梦战棋';
+  if (S.screen === 'deploy') {
+    title = '布置界面 ' + S.deploy.player;
+    chips.push('<span class="chip ' + (S.deploy.player === 1 ? 'p1' : 'p2') + '">' + playerLabel(S.deploy.player) + '放置</span>');
+    chips.push('<span class="chip">已放置 <b>' + S.deploy.n + '/' + DEPLOY_LIMIT + '</b></span>');
+    chips.push('<span class="chip state">阶段 <b>' + (S.phase === 'select' ? '选择状态' : '闲置状态') + '</b></span>');
+  } else if (S.screen === 'battle') {
+    title = '战斗页面';
+    chips.push('<span class="chip ' + (S.current === 1 ? 'p1' : 'p2') + '">当前 <b>' + playerLabel(S.current) + '</b></span>');
+    chips.push('<span class="chip p1">A1 <b>' + S.A1 + '</b></span>');
+    chips.push('<span class="chip p2">A2 <b>' + S.A2 + '</b></span>');
+    chips.push('<span class="chip state">' + phaseName(S.phase) + '</span>');
+  } else if (S.screen === 'gameover') {
+    title = '游戏结束';
+    chips.push('<span class="chip">A1 <b>' + S.A1 + '</b></span>');
+    chips.push('<span class="chip">A2 <b>' + S.A2 + '</b></span>');
+  }
+  $('tbTitle').textContent = title;
+  $('tbChips').innerHTML = chips.join('');
+}
+
+function phaseName(p) {
+  var m = {
+    idle: '可行动：点击己方宝可梦', moveCalc: '移动计算状态', anim: '移动动画（不可输入）',
+    movedChoice: '移动后选择状态', atkCalc: '攻击判定状态', atkReady: '攻击预备状态', gameover: '游戏结束'
+  };
+  return '<b>' + (m[p] || p) + '</b>';
+}
+
+/* SECTION: ui-left */
+function renderLeft() {
+  var head = $('leftHead'), body = $('leftBody'), foot = $('leftFoot');
+  if (S.screen === 'deploy') {
+    var p = S.deploy.player;
+    head.className = 'panel-head ' + (p === 1 ? 'head-p1' : 'head-p2');
+    head.innerHTML = playerLabel(p) + '放置<span class="tag">n=' + S.deploy.n + '/' + DEPLOY_LIMIT + '</span>';
+    var html = '';
+    for (var i = 0; i < POKEMONS.length; i++) {
+      var b = POKEMONS[i];
+      var on = (S.deploy.picked === b.id && S.deploy.pickFrom === 'list');
+      html += '<button class="pick' + (on ? ' on' : '') + '" data-pick="' + b.id + '">' +
+        '<span class="pick-av" style="background:' + typeColor(b.type) + '">' + b.glyph + '</span>' +
+        '<span><span class="pick-name">' + b.name + '</span>' +
+        '<span class="pick-meta">' + TYPE_NAMES[b.type] + ' · HP' + b.hp + ' · 移动' + b.move + '</span></span></button>';
+    }
+    html += '<div class="sub-h">已放置</div>';
+    html += S.deploy.placed.length ? S.deploy.placed.map(function (it) {
+      var bb = getPokemon(it.id);
+      var on2 = (S.deploy.pickCell && S.deploy.pickCell.x === it.x && S.deploy.pickCell.y === it.y);
+      return '<button class="rs clickable' + (on2 ? ' on' : '') + '" data-dcell="' + it.x + ',' + it.y + '">' +
+        '<span class="rs-av" style="background:' + typeColor(bb.type) + '">' + bb.glyph + '</span>' +
+        '<span class="rs-nm">' + bb.name + '</span><span class="rs-hp">(' + it.x + ',' + it.y + ')</span></button>';
+    }).join('') : '<div class="log-empty">尚无宝可梦，点击上方选择后放入黄色高亮格</div>';
+    body.innerHTML = html;
+    var canDel = (S.phase === 'select');
+    foot.innerHTML = '<button class="btn-danger" id="btnDelete"' + (canDel ? '' : ' disabled') + '>删 除</button>';
+  } else {
+    head.className = 'panel-head';
+    head.innerHTML = '双方阵容<span class="tag">点击查看详情</span>';
+    var out = ['', ''];
+    for (var s = 1; s <= 2; s++) {
+      out[s - 1] = '<div class="sub-h" style="color:' + (s === 1 ? 'var(--p1)' : 'var(--p2)') + '">' + playerLabel(s) + '（A' + s + '=' + (s === 1 ? S.A1 : S.A2) + '）</div><div class="roster">';
+      var any = false;
+      for (var j = 0; j < S.units.length; j++) {
+        var u = S.units[j];
+        if (u.side !== s) continue;
+        any = true;
+        var sel = (uiInspect === u.no);
+        out[s - 1] += '<div class="rs clickable' + (sel ? ' on' : '') + (u.alive ? '' : ' dead') + '" data-unit="' + u.no + '">' +
+          '<span class="rs-av" style="background:' + typeColor(u.base.type) + '">' + u.base.glyph + '</span>' +
+          '<span class="rs-nm">' + u.base.name + '</span>' +
+          '<span class="rs-hp">' + (u.alive ? u.hp + '/' + u.base.hp : '阵亡') + '</span></div>';
+      }
+      out[s - 1] += any ? '</div>' : '<div class="log-empty">无</div></div>';
+    }
+    body.innerHTML = out.join('');
+    foot.innerHTML = '<button class="btn-ghost" id="btnRulesBattle" style="width:100%">规则与数据速查</button>';
+  }
+}
+
+/* SECTION: ui-right */
+function renderRight() {
+  var head = $('rightHead'), body = $('rightBody'), foot = $('rightFoot');
+  if (S.screen === 'deploy') {
+    head.innerHTML = '信息栏';
+    if (S.phase === 'select' && S.deploy.picked) {
+      body.innerHTML = pokemonDetail(getPokemon(S.deploy.picked));
+    } else {
+      body.innerHTML = '<div class="info-empty">信息栏为空<br>点击左侧宝可梦或可放置区内的宝可梦查看信息</div>';
+    }
+    var lit = deployReady();
+    foot.innerHTML = '<button class="btn-confirm' + (lit ? ' lit' : '') + '" id="btnDeployOk"' +
+      (lit ? ' data-primary-action' : '') + '>' + (lit ? '确 定' : '确定（未亮起）') + '</button>';
+  } else {
+    var u = null;
+    var no = uiInspect != null ? uiInspect : (S.sel != null ? S.sel : (S.target != null ? S.target : null));
+    if (no != null) u = unitByNo(no);
+    head.innerHTML = u ? '信息栏 · ' + u.base.name : '信息栏';
+    body.innerHTML = u ? unitDetail(u) : '<div class="info-empty">信息栏为空<br>点击地图上的宝可梦查看详情</div>';
+    foot.innerHTML = '<div class="kv" style="margin-top:0"><dt>地图</dt><dd>' + MAP_PRESETS[S.mapPreset].name + '</dd>' +
+      '<dt>回合方</dt><dd>' + playerLabel(S.current) + '</dd></div>';
+  }
+  renderLog();
+}
+
+function pokemonDetail(b) {
+  var eff = FIELD_EFFECTS[TERRAINS['01'].effect];
+  var h = '<div class="info-title"><span class="info-av" style="background:' + typeColor(b.type) + '">' + b.glyph + '</span>' +
+    '<span><span class="info-name">' + b.name + '</span><span class="info-tags">' +
+    '<span class="tg">Id ' + b.id + '</span>' +
+    '<span class="tg" style="border-color:' + typeColor(b.type) + ';color:' + typeColor(b.type) + '">属性 ' + b.type + ' ' + TYPE_NAMES[b.type] + '</span>' +
+    '<span class="tg">移动 ' + FORM_NAMES[b.form] + '</span></span></span></div>';
+  h += '<dl class="kv">' +
+    '<dt>基础血量</dt><dd>' + b.hp + '</dd>' +
+    '<dt>移动力</dt><dd>' + b.move + '</dd>' +
+    '<dt>技能名称</dt><dd>' + b.skill.name + '</dd>' +
+    '<dt>伤害</dt><dd>' + b.skill.dmg + '</dd>' +
+    '<dt>攻击范围</dt><dd>' + b.skill.range + ' 格</dd>' +
+    '<dt>技能属性</dt><dd>' + b.skill.type + ' ' + TYPE_NAMES[b.skill.type] + '</dd>' +
+    '<dt>特效图</dt><dd>' + b.skill.vfx + '（以文字代替）</dd>' +
+    '</dl>';
+  h += '<div class="sub-h">技能效果（动态数组）</div><div class="eff-list">';
+  for (var i = 0; i < b.skill.effects.length; i++) {
+    var e = b.skill.effects[i];
+    var d = e.tag === '00' ? MOVE_BUFFS[e.code] : BATTLE_BUFFS[e.code];
+    h += '<div class="eff"><b>' + d.name + '</b> · ' + d.desc + ' · 持续 ' + e.dur + (e.unit === 'turn' ? ' 回合' : ' 次') +
+      '（标签 ' + e.tag + ' ' + BUFF_TAG_NAMES[e.tag] + '）</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function unitDetail(u) {
+  var tm = tempMove(u), form = effectiveForm(u);
+  var ar = atkRangeOf(u, S.tempPos && S.sel === u.no ? S.tempPos : null);
+  var h = '<div class="info-title"><span class="info-av" style="background:' + typeColor(u.base.type) + '">' + u.base.glyph + '</span>' +
+    '<span><span class="info-name">' + u.base.name + '</span><span class="info-tags">' +
+    '<span class="tg">场内编号 ' + u.no + '</span>' +
+    '<span class="tg" style="border-color:' + (u.side === 1 ? 'var(--p1)' : 'var(--p2)') + ';color:' + (u.side === 1 ? '#bcd9ff' : '#ffc9c9') + '">' + playerLabel(u.side) + '</span>' +
+    '<span class="tg" style="border-color:' + typeColor(u.base.type) + ';color:' + typeColor(u.base.type) + '">' + TYPE_NAMES[u.base.type] + '</span>' +
+    '</span></span></div>';
+  var pct = Math.max(0, Math.round(u.hp / u.base.hp * 100));
+  h += '<div class="hpbar ' + (pct <= 30 ? 'low' : (pct <= 60 ? 'mid' : '')) + '"><i style="width:' + pct + '%"></i></div>' +
+    '<div class="hptxt"><span>当前血量 ' + u.hp + ' / ' + u.base.hp + '</span><span>' + pct + '%</span></div>';
+  h += '<dl class="kv">' +
+    '<dt>当前位置</dt><dd>(' + u.x + ',' + u.y + ')' + (S.tempPos && S.sel === u.no ? ' → 临时 (' + S.tempPos.x + ',' + S.tempPos.y + ')' : '') + '</dd>' +
+    '<dt>存活状态</dt><dd>' + (u.alive ? '是' : '否') + '</dd>' +
+    '<dt>可行动</dt><dd>' + (u.canAct ? '是' : '否') + '</dd>' +
+    '<dt>移动力</dt><dd>' + u.base.move + ' → 临时 <b>' + tm + '</b></dd>' +
+    '<dt>移动形态</dt><dd>' + FORM_NAMES[form] + (form !== u.base.form ? '（被击落）' : '') + '</dd>' +
+    '<dt>技能</dt><dd>' + u.base.skill.name + ' · ' + u.base.skill.dmg + ' 伤害 · ' + u.base.skill.range + ' 格' +
+      (ar !== u.base.skill.range ? ' → 实际 <b>' + ar + '</b>' : '') + '</dd>' +
+    '<dt>所在场地</dt><dd>' + terrainAt(u.x, u.y).name + ' · ' + fieldEffectAt(u.x, u.y).name + '</dd>' +
+    '<dt>ZOC状态</dt><dd>' + (S.moveRange && S.moveRange.zoc ? '敌方ZOC覆盖区域进入额外消耗+1' : '—') + '</dd>' +
+    '</dl>';
+  var bs = buffsOf(u.no);
+  h += '<div class="sub-h">Buff 链表（' + bs.length + '）</div>';
+  if (!bs.length) h += '<div class="eff" style="border-left-color:var(--dim2)">无</div>';
+  else {
+    h += '<div class="eff-list">';
+    for (var i = 0; i < bs.length; i++) {
+      h += '<div class="eff"><b>' + bs[i].name + '</b> · 标签 ' + bs[i].tag + ' ' + BUFF_TAG_NAMES[bs[i].tag] +
+        ' · 剩余 ' + bs[i].remain + (bs[i].unit === 'turn' ? ' 回合' : ' 次') + '<br>' + bs[i].desc + '</div>';
+    }
+    h += '</div>';
+  }
+  return h;
+}
+
+function renderLog() {
+  var box = $('logBox');
+  $('logTag').textContent = S.logs.length ? S.logs.length + ' 条' : '';
+  if (!S.logs.length) { box.innerHTML = '<div class="log-empty">暂无记录</div>'; return; }
+  box.innerHTML = S.logs.slice().reverse().map(function (l) {
+    return '<div class="log-i ' + l.cls + '">' + l.text + '</div>';
+  }).join('');
+}
+
+/* SECTION: ui-actionbar */
+function renderActionbar() {
+  var hint = $('abHint'), btns = $('abBtns'), b = [];
+  if (S.screen === 'deploy') {
+    hint.innerHTML = S.phase === 'select'
+      ? '选择状态：点击<b>空的可放置格</b>放置，点击<b>已放置宝可梦</b>替换，或点<b>删除</b>移除'
+      : '闲置状态：点击左侧宝可梦或可放置区内的宝可梦进入选择状态（n=' + S.deploy.n + '/' + DEPLOY_LIMIT + '）';
+    b.push({ t: '取消选择', a: 'cancelPick', dis: S.phase !== 'select' });
+    b.push({ t: '重新布置', a: 'restartDeploy' });
+  } else if (S.screen === 'battle') {
+    if (S.busy) hint.innerHTML = '移动动画播放中，<b>不可进行输入</b>';
+    else if (S.phase === 'moveCalc') hint.innerHTML = '移动计算状态：点击<b>高亮格</b>移动，ZOC格额外消耗+1，右键取消';
+    else if (S.phase === 'movedChoice') hint.innerHTML = '移动后选择状态：选择<b>攻击</b>或<b>等待</b>，右键返回记录位置';
+    else if (S.phase === 'atkCalc') hint.innerHTML = '攻击判定状态：点击<b>红色高亮格内的敌方宝可梦</b>，右键返回';
+    else if (S.phase === 'atkReady') hint.innerHTML = '攻击预备状态：左键触发攻击函数，右键返回攻击判定状态';
+    else hint.innerHTML = playerLabel(S.current) + ' 行动：点击<b>己方宝可梦</b>进入移动计算状态，右键询问是否结束回合';
+    if (S.phase === 'movedChoice') {
+      b.push({ t: '攻击', a: 'atk', cls: 'warn' });
+      b.push({ t: '等待', a: 'wait' });
+      b.push({ t: '取消移动', a: 'revert' });
+    } else if (S.phase === 'moveCalc') {
+      b.push({ t: '取消', a: 'cancelMove' });
+    } else if (S.phase === 'atkCalc') {
+      b.push({ t: '返回', a: 'backChoice' });
+    } else {
+      b.push({ t: '结束回合', a: 'endTurn', dis: S.busy });
+      b.push({ t: '返回初始界面', a: 'toTitle' });
+    }
+  } else {
+    hint.innerHTML = '右键或点击按钮返回初始界面';
+    b.push({ t: '返回初始界面', a: 'toTitle' });
+  }
+  btns.innerHTML = b.map(function (x) {
+    return '<button class="ab-btn' + (x.cls ? ' ' + x.cls : '') + '" data-act="' + x.a + '"' + (x.dis ? ' disabled' : '') + '>' + x.t + '</button>';
+  }).join('');
+}
+
+/* SECTION: ui-render */
+function render() {
+  if (S.screen === 'title') { $('screenTitle').classList.remove('hidden'); $('screenGame').classList.add('hidden'); return; }
+  $('screenTitle').classList.add('hidden');
+  $('screenGame').classList.remove('hidden');
+  renderTopbar(); renderBoard(); renderLegend(); renderLeft(); renderRight(); renderActionbar();
+}
+
+function renderTitle() {
+  var seg = $('segMap'), html = '';
+  for (var k in MAP_PRESETS) {
+    html += '<button data-preset="' + k + '"' + (S.mapPreset === k ? ' class="on"' : '') + '>' + MAP_PRESETS[k].name + '</button>';
+  }
+  seg.innerHTML = html;
+  window.__lastPreset = S.mapPreset;
+}
+
+/* SECTION: ui-modals-battle */
+function openMovedChoice(u) {
+  openModal({
+    kind: 'movedChoice',
+    title: '移动后选择状态',
+    body: '<div class="rules" style="text-align:center">' +
+      '<b style="color:var(--txt)">' + u.base.name + '</b> 已移动至 (' + (S.tempPos ? S.tempPos.x : u.x) + ',' + (S.tempPos ? S.tempPos.y : u.y) + ')（临时位置）<br>' +
+      '<span style="color:var(--dim2)">点击「攻击」进入攻击判定状态；点击「等待」写入坐标并置可行动=否；右键立刻读取战斗信息中的位置并贴回原处。</span></div>',
+    buttons: [
+      { text: '攻击', cls: 'btn-ghost', act: function () { closeModal(); chooseAttack(); } },
+      { text: '等待', cls: 'btn-ghost', act: function () { closeModal(); chooseWait(); } }
+    ]
+  });
+}
+
+function typeChartTable() {
+  var h = '<table class="rtable"><caption>属性克制表（行=受击方，列=攻击方）</caption><tr><th>受击＼攻击</th>';
+  for (var a = 0; a < TYPE_NAMES.length; a++) h += '<th>' + TYPE_NAMES[a] + '</th>';
+  h += '</tr>';
+  for (var d = 0; d < TYPE_NAMES.length; d++) {
+    h += '<tr><th>' + TYPE_NAMES[d] + '</th>';
+    for (var a2 = 0; a2 < TYPE_NAMES.length; a2++) {
+      var v = TYPE_CHART[d][a2];
+      h += '<td class="' + (v > 1 ? 'up' : (v < 1 ? 'down' : '')) + '">' + (v === 0.5 ? '1/2' : v) + '</td>';
+    }
+    h += '</tr>';
+  }
+  return h + '</table>';
+}
+
+function openAttackConfirm(atk, def) {
+  function card(u, role, cls) {
+    var bs = buffsOf(u.no);
+    return '<div class="vs-card ' + cls + '"><div class="vs-role">' + role + '</div>' +
+      '<div class="vs-nm"><span class="vs-av" style="background:' + typeColor(u.base.type) + '">' + u.base.glyph + '</span>' +
+      u.base.name + '</div>' +
+      '<dl class="kv"><dt>阵营</dt><dd>' + playerLabel(u.side) + '</dd>' +
+      '<dt>属性</dt><dd>' + TYPE_NAMES[u.base.type] + '</dd>' +
+      '<dt>血量</dt><dd>' + u.hp + ' / ' + u.base.hp + '</dd>' +
+      '<dt>技能</dt><dd>' + u.base.skill.name + ' ' + u.base.skill.dmg + '</dd>' +
+      '<dt>庇护</dt><dd>' + (dmgReduceOf(u.no) ? '减免 ' + dmgReduceOf(u.no) : '无') + '</dd>' +
+      '<dt>Buff</dt><dd>' + (bs.length ? bs.map(function (b) { return b.name + '(' + b.remain + ')'; }).join('、') : '无') + '</dd>' +
+      '</dl></div>';
+  }
+  var mult = TYPE_CHART[def.base.type][atk.base.type];
+  var raw = atk.base.skill.dmg * mult;
+  var reduce = dmgReduceOf(def.no);
+  var fin = Math.max(0, raw - reduce);
+  var effNames = atk.base.skill.effects.map(function (e) {
+    var d = e.tag === '00' ? MOVE_BUFFS[e.code] : BATTLE_BUFFS[e.code];
+    return d.name + ' ' + e.dur + (e.unit === 'turn' ? ' 回合' : ' 次');
+  }).join('、') || '无';
+  var body = '<div class="vs">' + card(atk, '攻击方', 'a') + '<div class="vs-mid">VS</div>' + card(def, '防守方', 'd') + '</div>' +
+    '<div class="prewarn">' + atk.base.skill.vfx + '<br>' +
+    '属性倍率：受击方 <b>' + TYPE_NAMES[def.base.type] + '</b> 行 × 攻击方 <b>' + TYPE_NAMES[atk.base.type] + '</b> 列 = <b>' +
+    (mult === 0.5 ? '1/2' : mult) + '</b><br>' +
+    '预计伤害：<b>' + atk.base.skill.dmg + '</b> × <b>' + mult + '</b>' + (reduce ? ' − 庇护 <b>' + reduce + '</b>' : '') +
+    ' = <b>' + fin + '</b> 点 → 防守方剩余 <b>' + Math.max(0, def.hp - fin) + '</b>' + (def.hp - fin <= 0 ? '（将阵亡）' : '') + '<br>' +
+    '附加效果：<b>' + effNames + '</b></div>';
+  openModal({
+    kind: 'atkReady', wide: true,
+    title: '攻击预备状态',
+    body: body,
+    buttons: [
+      { text: '右键返回攻击判定', cls: 'btn-ghost', act: function () { backToAtkCalc(); } },
+      { text: '触发攻击函数', cls: 'btn-primary', act: function () { confirmAttack(); } }
+    ]
+  });
+}
+
+function openGameOver() {
+  var txt = S.A1 === 0 ? '游戏结束，玩家二获胜' : '游戏结束，玩家一获胜';
+  openModal({
+    kind: 'gameover', wide: true,
+    title: '胜利判定',
+    body: '<div class="go-wrap"><div class="go-txt" style="color:' + (S.A1 === 0 ? 'var(--p2)' : 'var(--p1)') + '">' + txt + '</div>' +
+      '<div class="go-sub">A1=' + S.A1 + ' · A2=' + S.A2 + '　（A1 为 0 时玩家二获胜，A2 为 0 时玩家一获胜）</div>' +
+      '<div class="rules" style="text-align:left">可输入右键返回初始界面。</div></div>',
+    buttons: [{ text: '返回初始界面', cls: 'btn-primary', act: function () { backToTitle(); } }]
+  });
+}
+
+function openRules() {
+  var terrRows = ['01', '02', '03'].map(function (id) {
+    var t = TERRAINS[id];
+    return '<tr><td>' + t.id + ' ' + t.name + '</td><td>' + t.height + '</td><td>' + t.effect + ' ' + FIELD_EFFECTS[t.effect].name + '</td></tr>';
+  }).join('');
+  var pokeRows = POKEMONS.map(function (b) {
+    return '<tr><td>' + b.id + ' ' + b.name + '</td><td>' + b.type + ' ' + TYPE_NAMES[b.type] + '</td><td>' + b.hp + '</td><td>' +
+      b.skill.name + ' / ' + b.skill.dmg + ' / ' + b.skill.range + ' 格</td><td>' + b.move + '（' + FORM_NAMES[b.form] + '）</td></tr>';
+  }).join('');
+  var buffRows = ['01', '02', '03'].map(function (c) {
+    var d = MOVE_BUFFS[c];
+    return '<tr><td>00 移动 · ' + c + '</td><td>' + d.name + '</td><td>' + d.desc + '</td></tr>';
+  }).join('') + '<tr><td>01 战斗 · 00</td><td>' + BATTLE_BUFFS['00'].name + '</td><td>' + BATTLE_BUFFS['00'].desc + '</td></tr>';
+  var body = '<div class="rules">' +
+    '<h4>文件1 · 地图相关数据</h4>' +
+    '<table class="rtable"><tr><th>Id 地形</th><th>高度</th><th>效果</th></tr>' + terrRows + '</table>' +
+    '地图资源：<code>10×10</code> 格子（x:0~9，y:0~9）；场地效果 <code>01</code> 攻击距离+1' +
+    '<h4>文件2 · 宝可梦相关数据</h4>' +
+    '<table class="rtable"><tr><th>Id 名称</th><th>属性</th><th>血量</th><th>技能/伤害/范围</th><th>移动力(形态)</th></tr>' + pokeRows + '</table>' +
+    typeChartTable() +
+    '<table class="rtable"><caption>技能效果</caption><tr><th>标签·编号</th><th>名称</th><th>效果</th></tr>' + buffRows + '</table>' +
+    '<h4>文件3 · 战斗数据储存与计算</h4>' +
+    '<ul><li>临时移动力 = 移动力 + 移动类 Buff 效果，随后做 BFS 四向延展，消耗 = <code>1 + 高度差</code>，高度 ≥2 不可扩展</li>' +
+    '<li>攻击函数：敌方血量 = 敌方血量 − 技能伤害 × 属性倍率（庇护再减免 10 点）</li>' +
+    '<li>Buff 链表分「回合（每回合 −1）」与「次数（使用后 −1）」两类</li></ul>' +
+    '<h4>文件5 · 游戏启动</h4>' +
+    '<ul><li>初始界面 → 布置界面1（玩家一，格子 00/01/10/11）→ 布置界面2（玩家二）→ 战斗页面</li>' +
+    '<li>战斗页面记录 <code>A1=2, A2=2</code>，全部存活=是、可行动=否</li>' +
+    '<li>玩家一 ↔ 玩家二 无限循环，直至某方 A 值为 0</li>' +
+    '<li>右键优先级：部署界面 &gt; 战斗界面 &gt; 胜利/失败界面</li></ul>' +
+    '<h4>原型补充假设</h4>' +
+    '<ul><li>布置界面2 文档同为 00/01/10/11，会与玩家一重叠，此处改为对角区域 (8,8)(9,8)(8,9)(9,9)</li>' +
+    '<li>移动时敌方占据格不可通行，任何占据格不可停留</li>' +
+    '<li>回合型 Buff 在其持有者所属玩家回合结束时 −1</li>' +
+    '<li>海 / 空移动形态文档标注「待定」，本作按陆行同等处理</li></ul>' +
+    '</div>';
+  openModal({ kind: 'rules', wide: true, title: '规则与数据速查', body: body, closable: true, buttons: [{ text: '关闭', cls: 'btn-ghost', act: function () { closeModal(); } }] });
+}
+
+/* SECTION: ui-cellclick */
+function onCellClick(x, y) {
+  if (S.busy) { toast('移动动画播放中，不可进行输入', 'warn'); return; }
+  if (S.screen === 'deploy') { deployCellClick(x, y); return; }
+  if (S.screen === 'battle') { battleCellClick(x, y); return; }
+}
+
+function deployCellClick(x, y) {
+  if (!isDeployCell(x, y)) { toast('只有黄色高亮格可以放置', 'warn'); return; }
+  var onBoard = placedAt(x, y);
+  if (S.phase === 'select') {
+    if (onBoard) { deployDoReplace(x, y); return; }   // 替换
+    deployDoPlace(x, y);                              // 放置
+    return;
+  }
+  // 闲置状态：点击可放置区域的宝可梦 → 记录并进入选择状态
+  if (onBoard) {
+    S.deploy.picked = onBoard.id;
+    S.deploy.pickFrom = 'board';
+    S.deploy.pickCell = { x: x, y: y };
+    S.phase = 'select';
+    render();
+    return;
+  }
+  toast('闲置状态：请先点击左侧宝可梦，再点空格放置', 'warn');
+}
+
+function battleCellClick(x, y) {
+  var u = unitAt(x, y, null);
+  if (S.phase === 'idle') {
+    if (!u) { uiInspect = null; render(); return; }
+    uiInspect = u.no;
+    if (u.alive && u.side === S.current && u.canAct) { selectUnit(u); return; }
+    render();
+    if (!u.alive) toast(u.base.name + ' 存活状态=否，无法行动', 'warn');
+    else selectUnit(u); // 内部会给出不可行动提示
+    return;
+  }
+  if (S.phase === 'moveCalc') { tryMoveTo(x, y); return; }
+  if (S.phase === 'atkCalc') { tryTargetUnit(x, y); return; }
+}
+
+/* SECTION: ui-actions */
+function doAction(a) {
+  switch (a) {
+    case 'cancelPick':
+      deployReset(); S.phase = 'idle'; logAdd('取消选择（右键）', 'sys'); render(); break;
+    case 'restartDeploy':
+      S.deploy.placed = []; S.deploy.n = 0; deployReset(); S.phase = 'idle';
+      logAdd(playerLabel(S.deploy.player) + ' 重新布置，n=0', 'sys'); render(); break;
+    case 'cancelMove': cancelMoveCalc(); break;
+    case 'revert': closeModal(); revertToRecorded(); break;
+    case 'atk': closeModal(); chooseAttack(); break;
+    case 'wait': closeModal(); chooseWait(); break;
+    case 'backChoice': backToMovedChoice(); break;
+    case 'endTurn': askEndTurn(); break;
+    case 'toTitle': backToTitle(); break;
+    default: break;
+  }
+}
+
+/* SECTION: ui-events */
+function bindEvents() {
+  $('btnStart').addEventListener('click', function () { bootGame(); });
+  $('btnRulesTitle').addEventListener('click', openRules);
+  var rs = $('btnRescan');
+  if (rs) rs.addEventListener('click', rescanSprites);
+  $('segMap').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-preset]');
+    if (!b) return;
+    S.mapPreset = b.getAttribute('data-preset');
+    window.__lastPreset = S.mapPreset;
+    renderTitle();
+  });
+
+  // 地图点击（事件委托）
+  boardEl.addEventListener('click', function (e) {
+    var c = e.target.closest('.cell');
+    if (!c) return;
+    onCellClick(+c.getAttribute('data-x'), +c.getAttribute('data-y'));
+  });
+
+  // 右键：按当前界面状态切换
+  document.addEventListener('contextmenu', function (e) {
+    e.preventDefault();
+    if (S.screen === 'title') return;
+    onRightClick();
+  });
+
+  // 触屏长按等效右键
+  boardEl.addEventListener('touchstart', function (e) {
+    if (e.touches.length !== 1) return;
+    var c = e.target.closest('.cell');
+    if (!c) return;
+    longPressTimer = setTimeout(function () {
+      longPressTimer = null;
+      onRightClick();
+    }, 620);
+  }, { passive: true });
+  ['touchend', 'touchmove', 'touchcancel'].forEach(function (ev) {
+    boardEl.addEventListener(ev, function () {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+    }, { passive: true });
+  });
+
+  // 左/右面板与操作条委托
+  document.addEventListener('click', function (e) {
+    var pick = e.target.closest('[data-pick]');
+    if (pick) {
+      S.deploy.picked = pick.getAttribute('data-pick');
+      S.deploy.pickFrom = 'list'; S.deploy.pickCell = null;
+      S.phase = 'select';
+      logAdd('记录宝可梦 <b>' + getPokemon(S.deploy.picked).name + '</b>，进入选择状态', 'sys');
+      render(); return;
+    }
+    var dc = e.target.closest('[data-dcell]');
+    if (dc) {
+      var p = dc.getAttribute('data-dcell').split(',');
+      var it = placedAt(+p[0], +p[1]);
+      if (it) {
+        S.deploy.picked = it.id; S.deploy.pickFrom = 'board'; S.deploy.pickCell = { x: +p[0], y: +p[1] };
+        S.phase = 'select'; render();
+      }
+      return;
+    }
+    var un = e.target.closest('[data-unit]');
+    if (un) { uiInspect = +un.getAttribute('data-unit'); render(); return; }
+
+    if (e.target.closest('#btnDelete')) { deployDoDelete(); return; }
+    if (e.target.closest('#btnDeployOk')) { deployConfirm(); return; }
+    if (e.target.closest('#btnRulesBattle')) { openRules(); return; }
+
+    var act = e.target.closest('[data-act]');
+    if (act) { doAction(act.getAttribute('data-act')); return; }
+
+    // 行动阶段弹窗：点击任意位置弹窗消失
+    if (layerEl.getAttribute('data-kind') === '' && !layerEl.classList.contains('hidden')) closeModal();
+  });
+
+  // 键盘快捷键（桌面辅助）
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { onRightClick(); }
+  });
+}
+
+/* SECTION: ui-sprite-status */
+// 标题页贴图自检：列出素材目录、各地块与各动作已识别的帧数
+function renderSpriteStatus() {
+  var box = $('sprStatus'), rootEl = $('sprRoot');
+  if (!box) return;
+  if (typeof scanSprites !== 'function') { box.textContent = '未启用贴图层'; return; }
+  if (SPR.scanning) { box.innerHTML = '扫描中…'; return; }
+  if (rootEl) rootEl.textContent = SPR.root ? '（素材目录 ' + SPR.root + '）' : '';
+
+  var rows = [], found = 0, total = 0;
+  for (var t in TILE_FILES) {
+    total++;
+    var ok = !!SPR.tiles[t];
+    if (ok) found++;
+    rows.push((ok ? '✅' : '⬜') + ' 地块 ' + TERRAINS[t].name + ' → <code>' + TILE_FILES[t] + '</code>');
+  }
+  for (var p in UNIT_SPRITES) {
+    var base = getPokemon(p), cfg = UNIT_SPRITES[p];
+    for (var ai = 0; ai < ACTION_LIST.length; ai++) {
+      var act = ACTION_LIST[ai];
+      var fr = framesOf(p, act);
+      total++;
+      if (fr.length) found++;
+      var cn = { idle: '待机', run: '移动', attack: '攻击' }[act] || act;
+      var loop = LOOP_ACTIONS[act] ? '循环' : '播放至结束';
+      rows.push((fr.length ? '✅' : '⬜') + ' ' + (base ? base.name : p) + ' · ' + cn +
+        '（' + loop + '）→ <code>' + cfg.dir + '/' + cfg.dir + '_' + act + '_01.png</code>' +
+        (fr.length ? ' 已识别 ' + fr.length + ' 帧（' + fr[0].w + '×' + fr[0].h + '）' : ' 缺'));
+    }
+  }
+  var miss = total - found;
+  box.innerHTML = '<div style="margin-bottom:5px">已识别 <b style="color:var(--ok)">' + found +
+    '</b> / ' + total + ' 项' + (miss ? '，缺 ' + miss + ' 项（缺图自动回退文字，可只放一张先试）' : '，素材齐全') + '</div>' +
+    rows.join('<br>') +
+    '<div style="margin-top:6px;color:var(--dim2)">镜像说明：只需出一套「' +
+    (UNIT_SPRITES['01'] ? UNIT_SPRITES['01'].facing : 'left') + '」朝向的图，另一方向由程序自动镜像。</div>';
+}
+
+function rescanSprites() {
+  SPR.scanned = false;
+  SPR.tiles = {};
+  SPR.units = {};
+  SPR.root = null;
+  renderSpriteStatus();
+  scanSprites(function () {
+    renderSpriteStatus();
+    render();
+    var n = 0;
+    for (var t in SPR.tiles) if (SPR.tiles[t]) n++;
+    var m = 0;
+    for (var p in SPR.units) for (var a in SPR.units[p]) m += SPR.units[p][a].length;
+    toast('扫描完成：地块 ' + n + ' 种，动作帧 ' + m + ' 张', (n || m) ? '' : 'warn');
+    logAdd('重新扫描贴图：地块 ' + n + ' 种，动作帧 ' + m + ' 张', 'sys');
+  });
+}
+
+/* SECTION: ui-boot */
+S = newState();
+renderTitle();
+bindEvents();
+render();
+logAdd('原型已就绪：未放置贴图时以文字与色块呈现', 'sys');
+
+// 启动扫描贴图：放几张显示几张，缺图自动回退文字
+if (typeof scanSprites === 'function') {
+  renderSpriteStatus();
+  scanSprites(function () {
+    renderSpriteStatus();
+    render();
+    var n = 0;
+    for (var t in SPR.tiles) if (SPR.tiles[t]) n++;
+    var m = 0;
+    for (var p in SPR.units) for (var a in SPR.units[p]) m += SPR.units[p][a].length;
+    if (n || m) {
+      logAdd('已加载贴图：地块 ' + n + ' 种 · 动作帧 ' + m + ' 张', 'ok');
+      SPR.notes.forEach(function (s) { logAdd('· ' + s, 'sys'); });
+    } else {
+      logAdd('未检测到贴图（img/ 目录为空或不存在），当前为纯文字模式', 'sys');
+    }
+    toast((n || m) ? ('贴图已加载：地块 ' + n + ' 种，动作帧 ' + m + ' 张') : '未检测到贴图，当前为纯文字模式',
+      (n || m) ? '' : 'warn');
+  });
+}
+
+</script>
+</body>
+</html>
